@@ -598,15 +598,42 @@ export function PromptingIsAllYouNeed() {
       startY += wordIndex === 0 ? largeTextHeight + spaceBetweenLines : 0;
     });
 
-    // Initialize ball position near the top right corner
-    const ballStartX = canvas.width * 0.9;
-    const ballStartY = canvas.height * 0.1;
+    // Initialize ball position with random location along the edges
+    const randomEdge = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+    let ballStartX, ballStartY;
+
+    switch (randomEdge) {
+      case 0: // top edge
+        ballStartX = canvas.width * (0.2 + Math.random() * 0.6); // 20% to 80% of width
+        ballStartY = canvas.height * 0.1;
+        break;
+      case 1: // right edge
+        ballStartX = canvas.width * 0.9;
+        ballStartY = canvas.height * (0.2 + Math.random() * 0.6);
+        break;
+      case 2: // bottom edge
+        ballStartX = canvas.width * (0.2 + Math.random() * 0.6);
+        ballStartY = canvas.height * 0.9;
+        break;
+      default: // left edge
+        ballStartX = canvas.width * 0.1;
+        ballStartY = canvas.height * (0.2 + Math.random() * 0.6);
+        break;
+    }
+
+    // Generate random angle between -45 and 45 degrees from the perpendicular to the edge
+    const baseAngle = (randomEdge * 90 + 90) * (Math.PI / 180); // Convert to radians
+    const randomAngle = baseAngle + (Math.random() * 90 - 45) * (Math.PI / 180);
+
+    const speed = scaling.BALL_SPEED * trailConfigRef.current.ballSpeed;
+    const dx = Math.cos(randomAngle) * speed;
+    const dy = Math.sin(randomAngle) * speed;
 
     gameStateRef.current.ball = {
       x: ballStartX,
       y: ballStartY,
-      dx: -scaling.BALL_SPEED * trailConfigRef.current.ballSpeed,
-      dy: scaling.BALL_SPEED * trailConfigRef.current.ballSpeed,
+      dx: dx,
+      dy: dy,
       radius: (scaling.adjustedLargePixelSize / 2) * trailConfigRef.current.ballSize,
     };
 
