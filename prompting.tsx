@@ -6,11 +6,23 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "./components/ui/button";
 import { SettingsIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./components/ui/accordion";
 
 // Types for game configuration and state
 type PixelRow = (0 | 1)[];
 type LetterMatrix = PixelRow[];
 type PixelMap = Record<string, LetterMatrix>;
+
+interface Particle {
+  x: number;
+  y: number;
+  dx: number;
+  dy: number;
+  size: number;
+  life: number;
+  maxLife: number;
+  color: string;
+}
 
 interface GameConfig {
   colors: {
@@ -328,6 +340,7 @@ interface GameState {
   pixels: Pixel[];
   scale: number;
   trailPoints: TrailPoint[];
+  particles: Particle[];
 }
 
 interface TrailPoint {
@@ -346,6 +359,7 @@ interface TrailConfig {
   ballSpeed: number;
   firstLineText: string;
   secondLineText: string;
+  particleEffects: boolean;
 }
 
 // Default trail configuration
@@ -358,6 +372,7 @@ const DEFAULT_TRAIL_CONFIG: TrailConfig = {
   ballSpeed: 1,
   firstLineText: "CEM",
   secondLineText: "IS ALL YOU NEED",
+  particleEffects: true,
 };
 
 interface SettingsPanelProps {
@@ -370,6 +385,7 @@ interface SettingsPanelProps {
   onBallSpeedChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onFirstLineTextChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSecondLineTextChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onParticleEffectsChange: (enabled: boolean) => void;
   onApplyText: () => void;
   onResetDefaults: () => void;
   settingsPanelRef: React.RefObject<HTMLDivElement | null>;
@@ -385,6 +401,7 @@ function SettingsPanel({
   onBallSpeedChange,
   onFirstLineTextChange,
   onSecondLineTextChange,
+  onParticleEffectsChange,
   onApplyText,
   onResetDefaults,
   settingsPanelRef,
@@ -392,135 +409,182 @@ function SettingsPanel({
   return (
     <div
       ref={settingsPanelRef}
-      className={styles.settingsPanel}
+      className={`${styles.settingsPanel} max-h-[80vh] overflow-y-auto`}
     >
       <h2 className="text-xl font-bold mb-4">Settings</h2>
 
-      <div className="mb-4">
-        <h3 className="text-sm font-medium mb-2">Text Settings</h3>
-        <div className="space-y-2">
-          <div>
-            <label className="block text-xs mb-1">First Line</label>
-            <input
-              type="text"
-              value={trailConfig.firstLineText}
-              onChange={onFirstLineTextChange}
-              className="w-full px-2 py-1 text-sm bg-gray-800 rounded border border-gray-700 uppercase"
-              maxLength={20}
-              style={{ textTransform: "uppercase" }}
-            />
-          </div>
-          <div>
-            <label className="block text-xs mb-1">Second Line</label>
-            <input
-              type="text"
-              value={trailConfig.secondLineText}
-              onChange={onSecondLineTextChange}
-              className="w-full px-2 py-1 text-sm bg-gray-800 rounded border border-gray-700 uppercase"
-              maxLength={30}
-              style={{ textTransform: "uppercase" }}
-            />
-          </div>
-          <button
-            onClick={onApplyText}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white py-1 px-4 rounded text-sm transition-colors mt-2"
-          >
-            Apply Text
-          </button>
-        </div>
-      </div>
+      <Accordion
+        type="single"
+        collapsible
+        className="w-full space-y-2"
+      >
+        <AccordionItem value="text">
+          <AccordionTrigger className="text-sm font-medium">Text Settings</AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-2 pt-2">
+              <div>
+                <label className="block text-xs mb-1">First Line</label>
+                <input
+                  type="text"
+                  value={trailConfig.firstLineText}
+                  onChange={onFirstLineTextChange}
+                  className="w-full px-2 py-1 text-sm bg-gray-800 rounded border border-gray-700 uppercase"
+                  maxLength={20}
+                  style={{ textTransform: "uppercase" }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs mb-1">Second Line</label>
+                <input
+                  type="text"
+                  value={trailConfig.secondLineText}
+                  onChange={onSecondLineTextChange}
+                  className="w-full px-2 py-1 text-sm bg-gray-800 rounded border border-gray-700 uppercase"
+                  maxLength={30}
+                  style={{ textTransform: "uppercase" }}
+                />
+              </div>
+              <button
+                onClick={onApplyText}
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white py-1 px-4 rounded text-sm transition-colors mt-2"
+              >
+                Apply Text
+              </button>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      <div className="mb-4">
-        <h3 className="text-sm font-medium mb-2">Color Mode</h3>
-        <div className="flex space-x-1">
-          <button
-            className={`px-2 py-1 text-xs rounded ${trailConfig.mode === "rainbow" ? "bg-blue-600" : "bg-gray-700"}`}
-            onClick={() => onModeChange("rainbow")}
-          >
-            Rainbow
-          </button>
-          <button
-            className={`px-2 py-1 text-xs rounded ${trailConfig.mode === "gradient" ? "bg-blue-600" : "bg-gray-700"}`}
-            onClick={() => onModeChange("gradient")}
-          >
-            Gradient
-          </button>
-          <button
-            className={`px-2 py-1 text-xs rounded ${trailConfig.mode === "pulse" ? "bg-blue-600" : "bg-gray-700"}`}
-            onClick={() => onModeChange("pulse")}
-          >
-            Pulse
-          </button>
-        </div>
-      </div>
+        <AccordionItem value="effects">
+          <AccordionTrigger className="text-sm font-medium">Visual Effects</AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs">Particle Effects</span>
+                <button
+                  onClick={() => onParticleEffectsChange(!trailConfig.particleEffects)}
+                  className={`px-3 py-1 text-xs rounded transition-colors ${
+                    trailConfig.particleEffects ? "bg-blue-600" : "bg-gray-700"
+                  }`}
+                >
+                  {trailConfig.particleEffects ? "ON" : "OFF"}
+                </button>
+              </div>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Ball Size: {trailConfig.ballSize.toFixed(1)}x</label>
-        <input
-          type="range"
-          min="0.5"
-          max="2"
-          step="0.1"
-          value={trailConfig.ballSize}
-          onChange={onBallSizeChange}
-          className="w-full"
-        />
-      </div>
+              <div>
+                <h3 className="text-sm font-medium mb-2">Color Mode</h3>
+                <div className="flex space-x-1">
+                  <button
+                    className={`px-2 py-1 text-xs rounded ${
+                      trailConfig.mode === "rainbow" ? "bg-blue-600" : "bg-gray-700"
+                    }`}
+                    onClick={() => onModeChange("rainbow")}
+                  >
+                    Rainbow
+                  </button>
+                  <button
+                    className={`px-2 py-1 text-xs rounded ${
+                      trailConfig.mode === "gradient" ? "bg-blue-600" : "bg-gray-700"
+                    }`}
+                    onClick={() => onModeChange("gradient")}
+                  >
+                    Gradient
+                  </button>
+                  <button
+                    className={`px-2 py-1 text-xs rounded ${
+                      trailConfig.mode === "pulse" ? "bg-blue-600" : "bg-gray-700"
+                    }`}
+                    onClick={() => onModeChange("pulse")}
+                  >
+                    Pulse
+                  </button>
+                </div>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Ball Speed: {trailConfig.ballSpeed.toFixed(1)}x</label>
-        <input
-          type="range"
-          min="0.5"
-          max="10"
-          step="0.1"
-          value={trailConfig.ballSpeed}
-          onChange={onBallSpeedChange}
-          className="w-full"
-        />
-      </div>
+        <AccordionItem value="ball">
+          <AccordionTrigger className="text-sm font-medium">Ball Settings</AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-4 pt-2">
+              <div>
+                <label className="block text-xs mb-1">Ball Size: {trailConfig.ballSize.toFixed(1)}x</label>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="2"
+                  step="0.1"
+                  value={trailConfig.ballSize}
+                  onChange={onBallSizeChange}
+                  className="w-full"
+                />
+              </div>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Trail Length: {trailConfig.maxLength}</label>
-        <input
-          type="range"
-          min="5"
-          max="100"
-          value={trailConfig.maxLength}
-          onChange={onLengthChange}
-          className="w-full"
-        />
-      </div>
+              <div>
+                <label className="block text-xs mb-1">Ball Speed: {trailConfig.ballSpeed.toFixed(1)}x</label>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="10"
+                  step="0.1"
+                  value={trailConfig.ballSpeed}
+                  onChange={onBallSpeedChange}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Fade Speed: {trailConfig.fadeSpeed.toFixed(2)}</label>
-        <input
-          type="range"
-          min="0.01"
-          max="0.1"
-          step="0.01"
-          value={trailConfig.fadeSpeed}
-          onChange={onFadeSpeedChange}
-          className="w-full"
-        />
-      </div>
+        <AccordionItem value="trail">
+          <AccordionTrigger className="text-sm font-medium">Trail Settings</AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-4 pt-2">
+              <div>
+                <label className="block text-xs mb-1">Trail Length: {trailConfig.maxLength}</label>
+                <input
+                  type="range"
+                  min="5"
+                  max="100"
+                  value={trailConfig.maxLength}
+                  onChange={onLengthChange}
+                  className="w-full"
+                />
+              </div>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Trail Width: {trailConfig.width.toFixed(1)}</label>
-        <input
-          type="range"
-          min="0.5"
-          max="3"
-          step="0.1"
-          value={trailConfig.width}
-          onChange={onWidthChange}
-          className="w-full"
-        />
-      </div>
+              <div>
+                <label className="block text-xs mb-1">Fade Speed: {trailConfig.fadeSpeed.toFixed(2)}</label>
+                <input
+                  type="range"
+                  min="0.01"
+                  max="0.1"
+                  step="0.01"
+                  value={trailConfig.fadeSpeed}
+                  onChange={onFadeSpeedChange}
+                  className="w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs mb-1">Trail Width: {trailConfig.width.toFixed(1)}</label>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="3"
+                  step="0.1"
+                  value={trailConfig.width}
+                  onChange={onWidthChange}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       <button
         onClick={onResetDefaults}
-        className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded text-sm transition-colors"
+        className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded text-sm transition-colors mt-4"
       >
         Reset Settings
       </button>
@@ -548,6 +612,7 @@ export function PromptingIsAllYouNeed() {
     pixels: [],
     scale: 1,
     trailPoints: [],
+    particles: [],
   });
   const trailConfigRef = useRef<TrailConfig>({ ...DEFAULT_TRAIL_CONFIG });
   const gameLoopRef = useRef<number | null>(null);
@@ -869,6 +934,57 @@ export function PromptingIsAllYouNeed() {
     ];
   }, [calculateScalingValues]);
 
+  const createExplosion = useCallback((x: number, y: number, size: number) => {
+    const particleCount = 12; // Parçacık sayısını artırdım
+    const particles: Particle[] = [];
+
+    // Patlama efekti için sıcak renkler
+    const explosionColors = [
+      "#FFD700", // Altın sarısı
+      "#FFA500", // Turuncu
+      "#FF8C00", // Koyu turuncu
+      "#FF4500", // Kırmızımsı turuncu
+      "#FF0000", // Kırmızı
+      "#FF6B6B", // Açık kırmızı
+    ];
+
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 * i) / particleCount;
+      const speed = 3 + Math.random() * 3; // Hızı biraz artırdım
+      const randomColor = explosionColors[Math.floor(Math.random() * explosionColors.length)];
+
+      particles.push({
+        x,
+        y,
+        dx: Math.cos(angle) * speed,
+        dy: Math.sin(angle) * speed,
+        size: size / 2,
+        life: 1,
+        maxLife: 1,
+        color: randomColor,
+      });
+    }
+
+    gameStateRef.current.particles.push(...particles);
+  }, []);
+
+  const updateParticles = useCallback(() => {
+    gameStateRef.current.particles = gameStateRef.current.particles.filter((particle) => {
+      // Update particle position
+      particle.x += particle.dx;
+      particle.y += particle.dy;
+
+      // Gravity effect
+      particle.dy += 0.1; // Hafif yerçekimi efekti
+
+      // Update life
+      particle.life -= 0.025; // Biraz daha hızlı kaybolma
+
+      // Remove dead particles
+      return particle.life > 0;
+    });
+  }, []);
+
   const updateGame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -876,6 +992,9 @@ export function PromptingIsAllYouNeed() {
     const ball = gameStateRef.current.ball;
     const paddles = gameStateRef.current.paddles;
     const config = trailConfigRef.current;
+
+    // Update particles
+    updateParticles();
 
     ball.x += ball.dx;
     ball.y += ball.dy;
@@ -948,6 +1067,11 @@ export function PromptingIsAllYouNeed() {
         ball.y - ball.radius < pixel.y + pixel.size
       ) {
         pixel.hit = true;
+        // Create explosion effect when pixel is hit only if particle effects are enabled
+        if (trailConfigRef.current.particleEffects) {
+          createExplosion(pixel.x + pixel.size / 2, pixel.y + pixel.size / 2, pixel.size);
+        }
+
         const centerX = pixel.x + pixel.size / 2;
         const centerY = pixel.y + pixel.size / 2;
         if (Math.abs(ball.x - centerX) > Math.abs(ball.y - centerY)) {
@@ -957,7 +1081,7 @@ export function PromptingIsAllYouNeed() {
         }
       }
     });
-  }, [getTrailColor]);
+  }, [createExplosion, updateParticles, getTrailColor]);
 
   const drawGame = useCallback(() => {
     const canvas = canvasRef.current;
@@ -966,6 +1090,16 @@ export function PromptingIsAllYouNeed() {
 
     ctx.fillStyle = GAME_CONFIG.colors.background;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw particles
+    gameStateRef.current.particles.forEach((particle) => {
+      ctx.fillStyle = particle.color;
+      ctx.globalAlpha = particle.life;
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, particle.size * particle.life, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
 
     // Draw trail - draw in reverse order so newest points appear on top
     const config = trailConfigRef.current;
@@ -1108,6 +1242,10 @@ export function PromptingIsAllYouNeed() {
     setTrailConfig((prev) => ({ ...prev, secondLineText: value }));
   };
 
+  const handleParticleEffectsChange = (enabled: boolean) => {
+    setTrailConfig((prev) => ({ ...prev, particleEffects: enabled }));
+  };
+
   const handleApplyText = useCallback(() => {
     if (initializeGameRef.current) {
       updateURL(trailConfig.firstLineText, trailConfig.secondLineText);
@@ -1194,6 +1332,7 @@ export function PromptingIsAllYouNeed() {
           onBallSpeedChange={handleBallSpeedChange}
           onFirstLineTextChange={handleFirstLineTextChange}
           onSecondLineTextChange={handleSecondLineTextChange}
+          onParticleEffectsChange={handleParticleEffectsChange}
           onApplyText={handleApplyText}
           onResetDefaults={handleResetDefaults}
           settingsPanelRef={settingsPanelRef}
