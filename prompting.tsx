@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, Suspense } from "react";
 import { Button } from "./components/ui/button";
 import { SettingsIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -604,7 +604,7 @@ const styles = {
   settingsPanel: `fixed top-16 right-4 z-10 bg-gray-900 bg-opacity-90 text-white p-4 rounded-lg shadow-lg w-64`,
 };
 
-export function PromptingIsAllYouNeed() {
+function PromptingIsAllYouNeed() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameStateRef = useRef<GameState>({
     ball: { x: 0, y: 0, dx: 0, dy: 0, radius: 0 },
@@ -1342,4 +1342,10 @@ export function PromptingIsAllYouNeed() {
   );
 }
 
-export default PromptingIsAllYouNeed;
+export function PromptingGame() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PromptingIsAllYouNeed />
+    </Suspense>
+  );
+}
