@@ -5,6 +5,7 @@ import type React from "react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "./components/ui/button";
 import { SettingsIcon } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 // Types for game configuration and state
 type PixelRow = (0 | 1)[];
@@ -154,6 +155,146 @@ const PIXEL_MAP: PixelMap = {
     [1, 0, 0, 0],
     [1, 1, 1, 1],
   ],
+  B: [
+    [1, 1, 1, 1],
+    [1, 0, 0, 1],
+    [1, 1, 1, 1],
+    [1, 0, 0, 1],
+    [1, 1, 1, 1],
+  ],
+  F: [
+    [1, 1, 1, 1],
+    [1, 0, 0, 0],
+    [1, 1, 1, 0],
+    [1, 0, 0, 0],
+    [1, 0, 0, 0],
+  ],
+  H: [
+    [1, 0, 0, 1],
+    [1, 0, 0, 1],
+    [1, 1, 1, 1],
+    [1, 0, 0, 1],
+    [1, 0, 0, 1],
+  ],
+  J: [
+    [0, 0, 1, 1],
+    [0, 0, 0, 1],
+    [0, 0, 0, 1],
+    [1, 0, 0, 1],
+    [0, 1, 1, 0],
+  ],
+  K: [
+    [1, 0, 0, 1],
+    [1, 0, 1, 0],
+    [1, 1, 0, 0],
+    [1, 0, 1, 0],
+    [1, 0, 0, 1],
+  ],
+  Q: [
+    [1, 1, 1, 1],
+    [1, 0, 0, 1],
+    [1, 0, 0, 1],
+    [1, 0, 1, 1],
+    [1, 1, 1, 1],
+  ],
+  V: [
+    [1, 0, 0, 1],
+    [1, 0, 0, 1],
+    [1, 0, 0, 1],
+    [0, 1, 1, 0],
+    [0, 0, 0, 0],
+  ],
+  W: [
+    [1, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1],
+    [1, 0, 1, 0, 1],
+    [1, 1, 0, 1, 1],
+    [1, 0, 0, 0, 1],
+  ],
+  X: [
+    [1, 0, 0, 1],
+    [0, 1, 1, 0],
+    [0, 1, 1, 0],
+    [0, 1, 1, 0],
+    [1, 0, 0, 1],
+  ],
+  Z: [
+    [1, 1, 1, 1],
+    [0, 0, 1, 0],
+    [0, 1, 0, 0],
+    [1, 0, 0, 0],
+    [1, 1, 1, 1],
+  ],
+  "0": [
+    [0, 1, 1, 0],
+    [1, 0, 0, 1],
+    [1, 0, 0, 1],
+    [1, 0, 0, 1],
+    [0, 1, 1, 0],
+  ],
+  "1": [
+    [0, 1, 1, 0],
+    [0, 0, 1, 0],
+    [0, 0, 1, 0],
+    [0, 0, 1, 0],
+    [0, 1, 1, 1],
+  ],
+  "2": [
+    [1, 1, 1, 0],
+    [0, 0, 0, 1],
+    [0, 1, 1, 0],
+    [1, 0, 0, 0],
+    [1, 1, 1, 1],
+  ],
+  "3": [
+    [1, 1, 1, 0],
+    [0, 0, 0, 1],
+    [0, 1, 1, 0],
+    [0, 0, 0, 1],
+    [1, 1, 1, 0],
+  ],
+  "4": [
+    [1, 0, 0, 1],
+    [1, 0, 0, 1],
+    [1, 1, 1, 1],
+    [0, 0, 0, 1],
+    [0, 0, 0, 1],
+  ],
+  "5": [
+    [1, 1, 1, 1],
+    [1, 0, 0, 0],
+    [1, 1, 1, 0],
+    [0, 0, 0, 1],
+    [1, 1, 1, 0],
+  ],
+  "6": [
+    [0, 1, 1, 0],
+    [1, 0, 0, 0],
+    [1, 1, 1, 0],
+    [1, 0, 0, 1],
+    [0, 1, 1, 0],
+  ],
+  "7": [
+    [1, 1, 1, 1],
+    [0, 0, 0, 1],
+    [0, 0, 1, 0],
+    [0, 1, 0, 0],
+    [0, 1, 0, 0],
+  ],
+  "8": [
+    [0, 1, 1, 0],
+    [1, 0, 0, 1],
+    [0, 1, 1, 0],
+    [1, 0, 0, 1],
+    [0, 1, 1, 0],
+  ],
+  "9": [
+    [0, 1, 1, 0],
+    [1, 0, 0, 1],
+    [0, 1, 1, 1],
+    [0, 0, 0, 1],
+    [0, 1, 1, 0],
+  ],
 };
 
 // Game state types
@@ -203,6 +344,8 @@ interface TrailConfig {
   mode: "rainbow" | "gradient" | "pulse";
   ballSize: number;
   ballSpeed: number;
+  firstLineText: string;
+  secondLineText: string;
 }
 
 // Default trail configuration
@@ -213,6 +356,8 @@ const DEFAULT_TRAIL_CONFIG: TrailConfig = {
   mode: "rainbow",
   ballSize: 1,
   ballSpeed: 1,
+  firstLineText: "CEM",
+  secondLineText: "IS ALL YOU NEED",
 };
 
 interface SettingsPanelProps {
@@ -223,6 +368,9 @@ interface SettingsPanelProps {
   onWidthChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBallSizeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBallSpeedChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onFirstLineTextChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSecondLineTextChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onApplyText: () => void;
   onResetDefaults: () => void;
   settingsPanelRef: React.RefObject<HTMLDivElement | null>;
 }
@@ -235,6 +383,9 @@ function SettingsPanel({
   onWidthChange,
   onBallSizeChange,
   onBallSpeedChange,
+  onFirstLineTextChange,
+  onSecondLineTextChange,
+  onApplyText,
   onResetDefaults,
   settingsPanelRef,
 }: SettingsPanelProps) {
@@ -244,6 +395,40 @@ function SettingsPanel({
       className={styles.settingsPanel}
     >
       <h2 className="text-xl font-bold mb-4">Settings</h2>
+
+      <div className="mb-4">
+        <h3 className="text-sm font-medium mb-2">Text Settings</h3>
+        <div className="space-y-2">
+          <div>
+            <label className="block text-xs mb-1">First Line</label>
+            <input
+              type="text"
+              value={trailConfig.firstLineText}
+              onChange={onFirstLineTextChange}
+              className="w-full px-2 py-1 text-sm bg-gray-800 rounded border border-gray-700 uppercase"
+              maxLength={20}
+              style={{ textTransform: "uppercase" }}
+            />
+          </div>
+          <div>
+            <label className="block text-xs mb-1">Second Line</label>
+            <input
+              type="text"
+              value={trailConfig.secondLineText}
+              onChange={onSecondLineTextChange}
+              className="w-full px-2 py-1 text-sm bg-gray-800 rounded border border-gray-700 uppercase"
+              maxLength={30}
+              style={{ textTransform: "uppercase" }}
+            />
+          </div>
+          <button
+            onClick={onApplyText}
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white py-1 px-4 rounded text-sm transition-colors mt-2"
+          >
+            Apply Text
+          </button>
+        </div>
+      </div>
 
       <div className="mb-4">
         <h3 className="text-sm font-medium mb-2">Color Mode</h3>
@@ -348,7 +533,6 @@ const styles = {
   canvas: `fixed top-0 left-0 w-full h-full`,
   gameControls: `fixed top-4 left-4 flex gap-2 z-20`,
   settingsButton: `fixed top-4 right-4 z-10 bg-gray-800 text-white p-2 rounded-full shadow-lg hover:bg-gray-700 transition-colors`,
-  // button: `px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md text-white transition-colors`,
   errorContainer: `fixed inset-0 flex flex-col items-center justify-center bg-black/90 text-white p-4`,
   errorHeading: `text-2xl font-bold mb-4`,
   errorMessage: `mb-4`,
@@ -372,6 +556,27 @@ export function PromptingIsAllYouNeed() {
   const initializeGameRef = useRef<() => void>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  // Initialize trail config with URL parameters if they exist
+  const [trailConfig, setTrailConfig] = useState<TrailConfig>(() => {
+    const firstLine = searchParams.get("first") || DEFAULT_TRAIL_CONFIG.firstLineText;
+    const secondLine = searchParams.get("second") || DEFAULT_TRAIL_CONFIG.secondLineText;
+
+    return {
+      ...DEFAULT_TRAIL_CONFIG,
+      firstLineText: firstLine.toUpperCase(),
+      secondLineText: secondLine.toUpperCase(),
+    };
+  });
+
+  // Update URL when text changes
+  const updateURL = useCallback((first: string, second: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("first", first);
+    url.searchParams.set("second", second);
+    window.history.replaceState({}, "", url.toString());
+  }, []);
 
   // Handle keyboard controls
   useEffect(() => {
@@ -415,9 +620,6 @@ export function PromptingIsAllYouNeed() {
       }
     };
   }, []);
-
-  // Use state for trail configuration to make it reactive with UI
-  const [trailConfig, setTrailConfig] = useState<TrailConfig>({ ...DEFAULT_TRAIL_CONFIG });
 
   // State for settings panel visibility
   const [showSettings, setShowSettings] = useState(false);
@@ -525,7 +727,7 @@ export function PromptingIsAllYouNeed() {
     gameStateRef.current.pixels = [];
     gameStateRef.current.trailPoints = [];
 
-    const words = ["CEM", "IS ALL YOU NEED"];
+    const words = [trailConfigRef.current.firstLineText, trailConfigRef.current.secondLineText];
 
     const calculateWordWidth = (word: string, pixelSize: number) => {
       return (
@@ -548,7 +750,13 @@ export function PromptingIsAllYouNeed() {
       const pixelSize = wordIndex === 0 ? scaling.adjustedLargePixelSize : scaling.adjustedSmallPixelSize;
       const totalWidth =
         wordIndex === 0
-          ? calculateWordWidth(word, scaling.adjustedLargePixelSize)
+          ? word.split(" ").reduce((width, w, index) => {
+              return (
+                width +
+                calculateWordWidth(w, scaling.adjustedLargePixelSize) +
+                (index > 0 ? GAME_CONFIG.spacing.word * scaling.adjustedLargePixelSize : 0)
+              );
+            }, 0)
           : words[1].split(" ").reduce((width, w, index) => {
               return (
                 width +
@@ -559,27 +767,8 @@ export function PromptingIsAllYouNeed() {
 
       let startX = (canvas.width - totalWidth) / 2;
 
-      if (wordIndex === 1) {
-        word.split(" ").forEach((subWord) => {
-          subWord.split("").forEach((letter) => {
-            const pixelMap = PIXEL_MAP[letter as keyof typeof PIXEL_MAP];
-            if (!pixelMap) return;
-
-            for (let i = 0; i < pixelMap.length; i++) {
-              for (let j = 0; j < pixelMap[i].length; j++) {
-                if (pixelMap[i][j]) {
-                  const x = startX + j * pixelSize;
-                  const y = startY + i * pixelSize;
-                  gameStateRef.current.pixels.push({ x, y, size: pixelSize, hit: false });
-                }
-              }
-            }
-            startX += (pixelMap[0].length + GAME_CONFIG.spacing.letter) * pixelSize;
-          });
-          startX += GAME_CONFIG.spacing.word * scaling.adjustedSmallPixelSize;
-        });
-      } else {
-        word.split("").forEach((letter) => {
+      word.split(" ").forEach((subWord) => {
+        subWord.split("").forEach((letter) => {
           const pixelMap = PIXEL_MAP[letter as keyof typeof PIXEL_MAP];
           if (!pixelMap) return;
 
@@ -594,7 +783,11 @@ export function PromptingIsAllYouNeed() {
           }
           startX += (pixelMap[0].length + GAME_CONFIG.spacing.letter) * pixelSize;
         });
-      }
+        startX +=
+          GAME_CONFIG.spacing.word *
+          (wordIndex === 0 ? scaling.adjustedLargePixelSize : scaling.adjustedSmallPixelSize);
+      });
+
       startY += wordIndex === 0 ? largeTextHeight + spaceBetweenLines : 0;
     });
 
@@ -905,11 +1098,26 @@ export function PromptingIsAllYouNeed() {
     setTrailConfig((prev) => ({ ...prev, ballSpeed: value }));
   };
 
-  const handleResetDefaults = () => {
-    setTrailConfig({ ...DEFAULT_TRAIL_CONFIG });
+  const handleFirstLineTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase();
+    setTrailConfig((prev) => ({ ...prev, firstLineText: value }));
   };
 
-  const handleResetGame = () => {
+  const handleSecondLineTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase();
+    setTrailConfig((prev) => ({ ...prev, secondLineText: value }));
+  };
+
+  const handleApplyText = useCallback(() => {
+    if (initializeGameRef.current) {
+      updateURL(trailConfig.firstLineText, trailConfig.secondLineText);
+      initializeGameRef.current();
+    }
+  }, [trailConfig.firstLineText, trailConfig.secondLineText, updateURL]);
+
+  const handleResetDefaults = () => {
+    setTrailConfig({ ...DEFAULT_TRAIL_CONFIG });
+    updateURL(DEFAULT_TRAIL_CONFIG.firstLineText, DEFAULT_TRAIL_CONFIG.secondLineText);
     if (initializeGameRef.current) {
       initializeGameRef.current();
     }
@@ -984,6 +1192,9 @@ export function PromptingIsAllYouNeed() {
           onWidthChange={handleWidthChange}
           onBallSizeChange={handleBallSizeChange}
           onBallSpeedChange={handleBallSpeedChange}
+          onFirstLineTextChange={handleFirstLineTextChange}
+          onSecondLineTextChange={handleSecondLineTextChange}
+          onApplyText={handleApplyText}
           onResetDefaults={handleResetDefaults}
           settingsPanelRef={settingsPanelRef}
         />
