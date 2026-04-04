@@ -1,15 +1,14 @@
 # Bloklar
 
-Modern web teknolojileri kullanılarak geliştirilmiş, Next.js tabanlı bir web uygulaması.
+Modern web teknolojileri kullanılarak geliştirilmiş, Vite tabanlı bir web uygulaması.
 
 ## 🚀 Teknolojiler
 
-- [Next.js 15](https://nextjs.org/) - React framework
+- [Vite](https://vitejs.dev/) - Ön uç build aracı ve geliştirme sunucusu
 - [React 19](https://react.dev/) - UI kütüphanesi
 - [TypeScript](https://www.typescriptlang.org/) - Tip güvenli JavaScript
 - [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
 - [Radix UI](https://www.radix-ui.com/) - Erişilebilir UI bileşenleri
-- [Vercel Analytics](https://vercel.com/analytics) - Web analitik çözümü
 
 ## 🛠️ Kurulum
 
@@ -37,9 +36,9 @@ pnpm dev
 ## 📦 Scripts
 
 - `pnpm dev` - Geliştirme sunucusunu başlatır
-- `pnpm build` - Üretim için build alır
-- `pnpm start` - Üretim sunucusunu başlatır
-- `pnpm lint` - Kod kalitesi kontrolü yapar
+- `pnpm build` - Üretim için `dist/` klasörüne build alır
+- `pnpm preview` - Build çıktısını yerel olarak önizler
+- `pnpm typecheck` - TypeScript tip kontrolü yapar
 
 ## 🎯 Özellikler
 
@@ -47,7 +46,6 @@ pnpm dev
 - TypeScript ile tip güvenliği
 - Radix UI ile erişilebilir bileşenler
 - Tailwind CSS ile özelleştirilebilir stil sistemi
-- Vercel Analytics ile kullanıcı davranışlarını izleme
 
 ## 📝 Lisans
 

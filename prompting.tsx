@@ -1,11 +1,8 @@
-"use client";
-
 import type React from "react";
 
-import { useEffect, useRef, useState, useCallback, Suspense } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "./components/ui/button";
 import { SettingsIcon } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./components/ui/accordion";
 
 // Types for game configuration and state
@@ -407,17 +404,10 @@ function SettingsPanel({
   settingsPanelRef,
 }: SettingsPanelProps) {
   return (
-    <div
-      ref={settingsPanelRef}
-      className={`${styles.settingsPanel} max-h-[80vh] overflow-y-auto`}
-    >
+    <div ref={settingsPanelRef} className={`${styles.settingsPanel} max-h-[80vh] overflow-y-auto`}>
       <h2 className="text-xl font-bold mb-4">Settings</h2>
 
-      <Accordion
-        type="single"
-        collapsible
-        className="w-full space-y-2"
-      >
+      <Accordion type="single" collapsible className="w-full space-y-2">
         <AccordionItem value="text">
           <AccordionTrigger className="text-sm font-medium">Text Settings</AccordionTrigger>
           <AccordionContent>
@@ -621,12 +611,12 @@ function PromptingIsAllYouNeed() {
   const initializeGameRef = useRef<() => void>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const searchParams = useSearchParams();
 
   // Initialize trail config with URL parameters if they exist
   const [trailConfig, setTrailConfig] = useState<TrailConfig>(() => {
-    const firstLine = searchParams.get("first") || DEFAULT_TRAIL_CONFIG.firstLineText;
-    const secondLine = searchParams.get("second") || DEFAULT_TRAIL_CONFIG.secondLineText;
+    const params = new URLSearchParams(window.location.search);
+    const firstLine = params.get("first") || DEFAULT_TRAIL_CONFIG.firstLineText;
+    const secondLine = params.get("second") || DEFAULT_TRAIL_CONFIG.secondLineText;
 
     return {
       ...DEFAULT_TRAIL_CONFIG,
@@ -1263,16 +1253,10 @@ function PromptingIsAllYouNeed() {
 
   if (error) {
     return (
-      <div
-        role="alert"
-        className={styles.errorContainer}
-      >
+      <div role="alert" className={styles.errorContainer}>
         <h2 className={styles.errorHeading}>An error occurred</h2>
         <p className={styles.errorMessage}>{error}</p>
-        <button
-          className={styles.errorButton}
-          onClick={() => window.location.reload()}
-        >
+        <button className={styles.errorButton} onClick={() => window.location.reload()}>
           Reload Game
         </button>
       </div>
@@ -1281,24 +1265,9 @@ function PromptingIsAllYouNeed() {
 
   return (
     <div className={styles.gameContainer}>
-      <canvas
-        ref={canvasRef}
-        className={styles.canvas}
-        role="img"
-        aria-label="Prompting game canvas"
-        tabIndex={0}
-      />
-      <div
-        className={styles.gameControls}
-        role="group"
-        aria-label="Game controls"
-      >
-        <Button
-          variant="destructive"
-          size={"sm"}
-          onClick={() => initializeGameRef.current?.()}
-          aria-label="Reset game"
-        >
+      <canvas ref={canvasRef} className={styles.canvas} role="img" aria-label="Prompting game canvas" tabIndex={0} />
+      <div className={styles.gameControls} role="group" aria-label="Game controls">
+        <Button variant="destructive" size={"sm"} onClick={() => initializeGameRef.current?.()} aria-label="Reset game">
           Reset
         </Button>
         <Button
@@ -1343,9 +1312,5 @@ function PromptingIsAllYouNeed() {
 }
 
 export function PromptingGame() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <PromptingIsAllYouNeed />
-    </Suspense>
-  );
+  return <PromptingIsAllYouNeed />;
 }
