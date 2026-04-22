@@ -388,6 +388,16 @@ interface SettingsPanelProps {
   settingsPanelRef: React.RefObject<HTMLDivElement | null>;
 }
 
+const SETTINGS_FIELD_IDS = {
+  firstLine: "settings-first-line",
+  secondLine: "settings-second-line",
+  ballSize: "settings-ball-size",
+  ballSpeed: "settings-ball-speed",
+  trailLength: "settings-trail-length",
+  fadeSpeed: "settings-fade-speed",
+  trailWidth: "settings-trail-width",
+} as const;
+
 function SettingsPanel({
   trailConfig,
   onModeChange,
@@ -413,8 +423,11 @@ function SettingsPanel({
           <AccordionContent>
             <div className="space-y-2 pt-2">
               <div>
-                <label className="block text-xs mb-1">First Line</label>
+                <label htmlFor={SETTINGS_FIELD_IDS.firstLine} className="block text-xs mb-1">
+                  First Line
+                </label>
                 <input
+                  id={SETTINGS_FIELD_IDS.firstLine}
                   type="text"
                   value={trailConfig.firstLineText}
                   onChange={onFirstLineTextChange}
@@ -424,8 +437,11 @@ function SettingsPanel({
                 />
               </div>
               <div>
-                <label className="block text-xs mb-1">Second Line</label>
+                <label htmlFor={SETTINGS_FIELD_IDS.secondLine} className="block text-xs mb-1">
+                  Second Line
+                </label>
                 <input
+                  id={SETTINGS_FIELD_IDS.secondLine}
                   type="text"
                   value={trailConfig.secondLineText}
                   onChange={onSecondLineTextChange}
@@ -452,6 +468,7 @@ function SettingsPanel({
                 <span className="text-xs">Particle Effects</span>
                 <button
                   onClick={() => onParticleEffectsChange(!trailConfig.particleEffects)}
+                  aria-pressed={trailConfig.particleEffects}
                   className={`px-3 py-1 text-xs rounded transition-colors ${
                     trailConfig.particleEffects ? "bg-blue-600" : "bg-gray-700"
                   }`}
@@ -468,6 +485,7 @@ function SettingsPanel({
                       trailConfig.mode === "rainbow" ? "bg-blue-600" : "bg-gray-700"
                     }`}
                     onClick={() => onModeChange("rainbow")}
+                    aria-pressed={trailConfig.mode === "rainbow"}
                   >
                     Rainbow
                   </button>
@@ -476,6 +494,7 @@ function SettingsPanel({
                       trailConfig.mode === "gradient" ? "bg-blue-600" : "bg-gray-700"
                     }`}
                     onClick={() => onModeChange("gradient")}
+                    aria-pressed={trailConfig.mode === "gradient"}
                   >
                     Gradient
                   </button>
@@ -484,6 +503,7 @@ function SettingsPanel({
                       trailConfig.mode === "pulse" ? "bg-blue-600" : "bg-gray-700"
                     }`}
                     onClick={() => onModeChange("pulse")}
+                    aria-pressed={trailConfig.mode === "pulse"}
                   >
                     Pulse
                   </button>
@@ -498,8 +518,11 @@ function SettingsPanel({
           <AccordionContent>
             <div className="space-y-4 pt-2">
               <div>
-                <label className="block text-xs mb-1">Ball Size: {trailConfig.ballSize.toFixed(1)}x</label>
+                <label htmlFor={SETTINGS_FIELD_IDS.ballSize} className="block text-xs mb-1">
+                  Ball Size: {trailConfig.ballSize.toFixed(1)}x
+                </label>
                 <input
+                  id={SETTINGS_FIELD_IDS.ballSize}
                   type="range"
                   min="0.5"
                   max="2"
@@ -511,8 +534,11 @@ function SettingsPanel({
               </div>
 
               <div>
-                <label className="block text-xs mb-1">Ball Speed: {trailConfig.ballSpeed.toFixed(1)}x</label>
+                <label htmlFor={SETTINGS_FIELD_IDS.ballSpeed} className="block text-xs mb-1">
+                  Ball Speed: {trailConfig.ballSpeed.toFixed(1)}x
+                </label>
                 <input
+                  id={SETTINGS_FIELD_IDS.ballSpeed}
                   type="range"
                   min="0.5"
                   max="10"
@@ -531,8 +557,11 @@ function SettingsPanel({
           <AccordionContent>
             <div className="space-y-4 pt-2">
               <div>
-                <label className="block text-xs mb-1">Trail Length: {trailConfig.maxLength}</label>
+                <label htmlFor={SETTINGS_FIELD_IDS.trailLength} className="block text-xs mb-1">
+                  Trail Length: {trailConfig.maxLength}
+                </label>
                 <input
+                  id={SETTINGS_FIELD_IDS.trailLength}
                   type="range"
                   min="5"
                   max="100"
@@ -543,8 +572,11 @@ function SettingsPanel({
               </div>
 
               <div>
-                <label className="block text-xs mb-1">Fade Speed: {trailConfig.fadeSpeed.toFixed(2)}</label>
+                <label htmlFor={SETTINGS_FIELD_IDS.fadeSpeed} className="block text-xs mb-1">
+                  Fade Speed: {trailConfig.fadeSpeed.toFixed(2)}
+                </label>
                 <input
+                  id={SETTINGS_FIELD_IDS.fadeSpeed}
                   type="range"
                   min="0.01"
                   max="0.1"
@@ -556,8 +588,11 @@ function SettingsPanel({
               </div>
 
               <div>
-                <label className="block text-xs mb-1">Trail Width: {trailConfig.width.toFixed(1)}</label>
+                <label htmlFor={SETTINGS_FIELD_IDS.trailWidth} className="block text-xs mb-1">
+                  Trail Width: {trailConfig.width.toFixed(1)}
+                </label>
                 <input
+                  id={SETTINGS_FIELD_IDS.trailWidth}
                   type="range"
                   min="0.5"
                   max="3"
@@ -636,6 +671,14 @@ function PromptingIsAllYouNeed() {
   // Handle keyboard controls
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
+      const target = e.target;
+      if (target instanceof HTMLElement) {
+        const tagName = target.tagName;
+        if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT" || target.isContentEditable) {
+          return;
+        }
+      }
+
       switch (e.key) {
         case " ":
         case "Escape":
@@ -689,7 +732,7 @@ function PromptingIsAllYouNeed() {
     const SMALL_PIXEL_SIZE = 4 * scale;
 
     // Calculate total width for scaling
-    const words = ["CEM", "IS ALL YOU NEED"];
+    const words = [trailConfigRef.current.firstLineText, trailConfigRef.current.secondLineText];
     const calculateWordWidth = (word: string, pixelSize: number) => {
       return (
         word.split("").reduce((width, letter) => {
@@ -1178,14 +1221,14 @@ function PromptingIsAllYouNeed() {
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("pointerdown", handleClickOutside);
 
     // Start the game loop
     gameLoopRef.current = requestAnimationFrame(gameLoop);
 
     // Cleanup
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("pointerdown", handleClickOutside);
       if (gameLoopRef.current) {
         cancelAnimationFrame(gameLoopRef.current);
       }
