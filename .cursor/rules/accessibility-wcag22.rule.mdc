@@ -1,0 +1,24 @@
+---
+name: accessibility-wcag22
+description: Practical WCAG 2.2 accessibility expectations for UI work.
+alwaysApply: true
+---
+
+# Accessibility Rule
+
+Apply this rule for UI, forms, navigation, and interactive behavior changes.
+
+## Required Checks
+
+- All controls must have accessible names and semantic roles.
+- Keyboard navigation must work for all interactive elements.
+- Focus states must be visible and logical.
+- Color contrast and text readability must meet WCAG targets.
+- Form fields need labels, validation cues, and clear error messages.
+- Dynamic content updates should be announced appropriately when needed.
+
+## Implementation Guidance
+
+- Prefer native HTML semantics before custom ARIA.
+- Use ARIA only to supplement, not replace, proper semantics.
+- Avoid click-only interaction patterns; support keyboard activation.

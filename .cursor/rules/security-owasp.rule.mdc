@@ -1,0 +1,36 @@
+---
+name: security-owasp
+description: OWASP-aligned secure coding and review requirements.
+---
+
+# Security OWASP Rule
+
+Apply this rule to any code touching input handling, auth, storage, network, rendering, or dependencies.
+
+## Mandatory Security Checks
+
+- Validate and sanitize all external input server-side.
+- Use parameterized queries; never build SQL/NoSQL queries with raw user input.
+- Never hardcode secrets, tokens, or credentials.
+- Avoid dangerous command execution with user-controlled arguments.
+- Enforce authn/authz checks on protected endpoints and actions.
+- Prevent IDOR and mass assignment with ownership checks and allowlisted fields.
+- Keep sensitive tokens out of localStorage for auth flows.
+- Return generic production errors; do not leak stacks or internals.
+
+## Frontend Security
+
+- Do not render unsanitized HTML (`dangerouslySetInnerHTML`, `v-html`, `innerHTML`).
+- Avoid `eval` and dynamic code execution paths.
+- Validate redirect targets to prevent open redirects.
+
+## Operational Security
+
+- Prefer strict headers (CSP, HSTS, nosniff, frame protections).
+- Keep dependency risk visible (`pnpm audit` / lockfile hygiene).
+- Log security events without logging sensitive values.
+
+## Reference Docs
+
+- `/.cursor/reference/security-vuln-categories.md`
+- `/.cursor/reference/security-secret-patterns.md`

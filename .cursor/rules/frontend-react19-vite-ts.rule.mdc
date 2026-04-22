@@ -1,0 +1,27 @@
+---
+name: frontend-react19-vite-ts
+description: Stack-specific implementation standards for React 19 + Vite + TypeScript.
+---
+
+# Frontend Stack Rule
+
+Apply this rule for application code changes in this repository.
+
+## Stack Assumptions
+
+- React 19, Vite, TypeScript, Tailwind v3.
+- Prefer guidance compatible with this stack.
+- Do not assume Next.js-only primitives unless explicitly requested.
+
+## Coding Standards
+
+- Keep types explicit for public APIs and complex state.
+- Favor small composable components and hooks.
+- Prefer predictable state flow and clear side-effect boundaries.
+- Follow existing project patterns before introducing new abstractions.
+
+## Tailwind / UI Standards
+
+- Reuse existing utility patterns and shared components.
+- Keep class usage consistent and avoid one-off style drift.
+- Do not apply Tailwind v4-specific migration advice by default.

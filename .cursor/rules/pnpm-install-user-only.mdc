@@ -1,0 +1,12 @@
+---
+description: Require user to run pnpm install manually
+alwaysApply: true
+---
+
+# Dependency Installation Policy
+
+- Never run `pnpm install` directly.
+- When dependencies need to be installed, ask the user to run `pnpm install` and wait for confirmation before proceeding.
+- If a command would implicitly trigger dependency installation, stop and request user action first.
+- `npm` is forbidden in this repository. Never run `npm` commands.
+- Use `pnpm` as the only package/dependency management CLI in this repository.

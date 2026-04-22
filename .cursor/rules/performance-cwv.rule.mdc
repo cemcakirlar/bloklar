@@ -1,0 +1,29 @@
+---
+name: performance-cwv
+description: Core Web Vitals oriented frontend performance guardrails.
+---
+
+# Performance Rule
+
+Apply this rule for rendering, data fetching, animation, and bundle-impacting changes.
+
+## Core Web Vitals Focus
+
+- LCP: prioritize critical content rendering; reduce render-blocking work.
+- INP: avoid long main-thread tasks and heavy sync event handlers.
+- CLS: reserve layout space and avoid unexpected shifts.
+
+## Frontend Practices
+
+- Limit unnecessary rerenders and expensive derived computations.
+- Keep animation performant (transform/opacity preferred).
+- Avoid oversized dependencies and accidental bundle growth.
+- Use lazy loading and code-splitting where appropriate.
+
+## Investigation Output
+
+When asked for perf diagnosis, include:
+
+- observed bottleneck
+- user impact
+- prioritized fix options

@@ -1,0 +1,27 @@
+---
+name: testing-playwright-vitest
+description: Standards for E2E and unit/integration tests in this repo.
+---
+
+# Testing Rule (Playwright + Vitest)
+
+Apply this rule for test creation, updates, and diagnosis.
+
+## Playwright E2E
+
+- Prefer role-based and accessible locators (`getByRole`, `getByLabel`, `getByText`).
+- Avoid brittle selectors and hard waits.
+- Use web-first assertions with `await expect(...)`.
+- Use clear `test.describe`, descriptive test names, and `test.step` when useful.
+- Keep tests deterministic and independent.
+
+## Vitest / Component Logic Tests
+
+- Name tests by behavior, not implementation details.
+- Follow arrange-act-assert.
+- Cover happy path, edge case, and error path for meaningful logic.
+- Avoid broad assertions when specific assertions are possible.
+
+## Quality Gate
+
+- New behavior should include tests, or explicitly document test gap and risk.

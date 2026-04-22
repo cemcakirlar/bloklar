@@ -12,36 +12,36 @@ Complete before/after patterns for all React 19 breaking changes and removed API
 
 React 19 requires `createRoot()` or `hydrateRoot()` for all apps. If the React 18 migration already ran, this is done. Verify it's correct.
 
-### Pattern 1: createRoot()  CSR App
+### Pattern 1: createRoot() CSR App
 
 ```jsx
 // Before (React 18 or earlier):
-import ReactDOM from 'react-dom';
-ReactDOM.render(<App />, document.getElementById('root'));
+import ReactDOM from "react-dom";
+ReactDOM.render(<App />, document.getElementById("root"));
 
 // After (React 19):
-import { createRoot } from 'react-dom/client';
-const root = createRoot(document.getElementById('root'));
+import { createRoot } from "react-dom/client";
+const root = createRoot(document.getElementById("root"));
 root.render(<App />);
 ```
 
-### Pattern 2: hydrateRoot()  SSR/Static App
+### Pattern 2: hydrateRoot() SSR/Static App
 
 ```jsx
 // Before (React 18 server-rendered app):
-import ReactDOM from 'react-dom';
-ReactDOM.hydrate(<App />, document.getElementById('root'));
+import ReactDOM from "react-dom";
+ReactDOM.hydrate(<App />, document.getElementById("root"));
 
 // After (React 19):
-import { hydrateRoot } from 'react-dom/client';
-hydrateRoot(document.getElementById('root'), <App />);
+import { hydrateRoot } from "react-dom/client";
+hydrateRoot(document.getElementById("root"), <App />);
 ```
 
 ### Pattern 3: unmountComponentAtNode() Removed
 
 ```jsx
 // Before (React 18):
-import ReactDOM from 'react-dom';
+import ReactDOM from "react-dom";
 ReactDOM.unmountComponentAtNode(container);
 
 // After (React 19):
@@ -60,7 +60,7 @@ root.unmount();
 
 ```jsx
 // Before (React 18):
-import { findDOMNode } from 'react-dom';
+import { findDOMNode } from "react-dom";
 const domNode = findDOMNode(componentRef);
 
 // After (React 19):
@@ -71,12 +71,12 @@ const domNode = componentRef.current; // refs point directly to DOM
 
 ```jsx
 // Before (React 18):
-import { findDOMNode } from 'react-dom';
+import { findDOMNode } from "react-dom";
 class MyComponent extends React.Component {
   render() {
-    return <div ref={ref => this.node = ref}>Content</div>;
+    return <div ref={(ref) => (this.node = ref)}>Content</div>;
   }
-  
+
   getWidth() {
     return findDOMNode(this).offsetWidth;
   }
@@ -87,11 +87,11 @@ class MyComponent extends React.Component {
 // and use direct refs to access DOM nodes instead.
 class MyComponent extends React.Component {
   nodeRef = React.createRef();
-  
+
   render() {
     return <div ref={this.nodeRef}>Content</div>;
   }
-  
+
   getWidth() {
     return this.nodeRef.current.offsetWidth;
   }
@@ -106,11 +106,9 @@ class MyComponent extends React.Component {
 
 ```jsx
 // Before (React 18):
-import { forwardRef } from 'react';
+import { forwardRef } from "react";
 
-const Input = forwardRef((props, ref) => (
-  <input ref={ref} {...props} />
-));
+const Input = forwardRef((props, ref) => <input ref={ref} {...props} />);
 
 function App() {
   const inputRef = useRef(null);
@@ -133,16 +131,18 @@ function App() {
 
 ```jsx
 // Before (React 18):
-import { forwardRef, useImperativeHandle } from 'react';
+import { forwardRef, useImperativeHandle } from "react";
 
 const TextInput = forwardRef((props, ref) => {
   const inputRef = useRef();
-  
+
   useImperativeHandle(ref, () => ({
     focus: () => inputRef.current.focus(),
-    clear: () => { inputRef.current.value = ''; }
+    clear: () => {
+      inputRef.current.value = "";
+    },
   }));
-  
+
   return <input ref={inputRef} {...props} />;
 });
 
@@ -159,12 +159,14 @@ function App() {
 // After (React 19):
 function TextInput({ ref, ...props }) {
   const inputRef = useRef(null);
-  
+
   useImperativeHandle(ref, () => ({
     focus: () => inputRef.current.focus(),
-    clear: () => { inputRef.current.value = ''; }
+    clear: () => {
+      inputRef.current.value = "";
+    },
   }));
-  
+
   return <input ref={inputRef} {...props} />;
 }
 
@@ -189,19 +191,19 @@ function App() {
 
 ```jsx
 // Before (React 18):
-function Button({ label = 'Click', disabled = false }) {
+function Button({ label = "Click", disabled = false }) {
   return <button disabled={disabled}>{label}</button>;
 }
 
 // WORKS BUT is removed in React 19:
 Button.defaultProps = {
-  label: 'Click',
-  disabled: false
+  label: "Click",
+  disabled: false,
 };
 
 // After (React 19):
 // ES6 default params are now the ONLY way:
-function Button({ label = 'Click', disabled = false }) {
+function Button({ label = "Click", disabled = false }) {
   return <button disabled={disabled}>{label}</button>;
 }
 
@@ -214,10 +216,10 @@ function Button({ label = 'Click', disabled = false }) {
 // Before (React 18):
 class Button extends React.Component {
   static defaultProps = {
-    label: 'Click',
-    disabled: false
+    label: "Click",
+    disabled: false,
   };
-  
+
   render() {
     return <button disabled={this.props.disabled}>{this.props.label}</button>;
   }
@@ -228,17 +230,17 @@ class Button extends React.Component {
 class Button extends React.Component {
   constructor(props) {
     super(props);
-    this.label = props.label || 'Click';
+    this.label = props.label || "Click";
     this.disabled = props.disabled || false;
   }
-  
+
   render() {
     return <button disabled={this.disabled}>{this.label}</button>;
   }
 }
 
 // Or simplify to function component with ES6 defaults:
-function Button({ label = 'Click', disabled = false }) {
+function Button({ label = "Click", disabled = false }) {
   return <button disabled={disabled}>{label}</button>;
 }
 ```
@@ -253,7 +255,7 @@ function Component({ value }) {
 }
 
 Component.defaultProps = {
-  value: null
+  value: null,
 };
 
 // After (React 19):
@@ -313,9 +315,9 @@ function Component() {
 // Using contextTypes (old PropTypes-style context):
 class MyComponent extends React.Component {
   static contextTypes = {
-    theme: PropTypes.string
+    theme: PropTypes.string,
   };
-  
+
   render() {
     return <div style={{ color: this.context.theme }}>Text</div>;
   }
@@ -324,13 +326,13 @@ class MyComponent extends React.Component {
 // Provider using getChildContext (old API):
 class App extends React.Component {
   static childContextTypes = {
-    theme: PropTypes.string
+    theme: PropTypes.string,
   };
-  
+
   getChildContext() {
-    return { theme: 'dark' };
+    return { theme: "dark" };
   }
-  
+
   render() {
     return <MyComponent />;
   }
@@ -360,7 +362,7 @@ function App() {
 // Before (class component consuming old context):
 class MyComponent extends React.Component {
   static contextType = ThemeContext;
-  
+
   render() {
     return <div style={{ color: this.context }}>Text</div>;
   }
@@ -371,7 +373,7 @@ class MyComponent extends React.Component {
 // Continue using this.context
 ```
 
-**Important:** If you're still using the old `contextTypes` + `getChildContext` pattern (not modern `createContext`), you **must** migrate to `createContext`  the old pattern is completely removed.
+**Important:** If you're still using the old `contextTypes` + `getChildContext` pattern (not modern `createContext`), you **must** migrate to `createContext` the old pattern is completely removed.
 
 ---
 
@@ -395,7 +397,7 @@ class Component extends React.Component {
 // After (React 19):
 class Component extends React.Component {
   inputRef = React.createRef();
-  
+
   render() {
     return (
       <>
@@ -428,11 +430,15 @@ class Component extends React.Component {
     super(props);
     this.inputRef = null;
   }
-  
+
   render() {
     return (
       <>
-        <input ref={(el) => { this.inputRef = el; }} />
+        <input
+          ref={(el) => {
+            this.inputRef = el;
+          }}
+        />
         <button onClick={() => this.inputRef?.focus()}>Focus</button>
       </>
     );
@@ -448,7 +454,7 @@ class Component extends React.Component {
 
 ```jsx
 // Before (React 18):
-import React from 'react'; // Needed for JSX transform
+import React from "react"; // Needed for JSX transform
 
 function Component() {
   return <div>Text</div>;
@@ -461,10 +467,10 @@ function Component() {
 }
 
 // BUT keep it if you use React.* APIs:
-import React from 'react';
+import React from "react";
 
 function Component() {
-  return <div>{React.useState ? 'yes' : 'no'}</div>;
+  return <div>{React.useState ? "yes" : "no"}</div>;
 }
 ```
 

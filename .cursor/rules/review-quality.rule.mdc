@@ -1,0 +1,32 @@
+---
+name: review-quality
+description: Severity-first code review protocol for this repository.
+---
+
+# Review Quality Rule
+
+Use this rule whenever asked to review code, PRs, patches, or diffs.
+
+## Priorities
+
+1. Critical: security holes, correctness bugs, data loss risk, breaking API changes.
+2. Important: missing tests in critical paths, major maintainability/perf issues.
+3. Suggestion: readability and non-blocking improvements.
+
+## Required Review Output
+
+- List findings first, sorted by severity.
+- For each finding, include:
+  - what is wrong
+  - why it matters
+  - concrete fix direction
+- Use file paths and symbols.
+- If no issues are found, state that clearly and call out remaining risk/test gaps.
+
+## Review Standards
+
+- Security: check authz/authn, secret exposure, injection sinks, unsafe HTML rendering.
+- Correctness: validate edge cases, error handling, and state transitions.
+- Testing: verify new behavior has tests or an explicit test-gap note.
+- Performance: flag obvious hot spots (N+1, unnecessary rerenders, blocking work).
+- Architecture: ensure consistency with existing patterns.

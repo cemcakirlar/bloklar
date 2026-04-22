@@ -2,8 +2,17 @@ import type React from "react";
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "./components/ui/button";
+import { GameSettingsPanel } from "./components/game-settings-panel";
 import { SettingsIcon } from "lucide-react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./components/ui/accordion";
+import {
+  DEFAULT_TRAIL_CONFIG,
+  MAX_FIRST_LINE_LENGTH,
+  MAX_SECOND_LINE_LENGTH,
+  sanitizeDisplayText,
+  type ParticleQuality,
+  type TrailConfig,
+  type TrailMode,
+} from "@/lib/game/trail-config";
 
 // Types for game configuration and state
 type PixelRow = (0 | 1)[];
@@ -11,14 +20,19 @@ type LetterMatrix = PixelRow[];
 type PixelMap = Record<string, LetterMatrix>;
 
 interface Particle {
+  kind: "spark" | "dust";
   x: number;
   y: number;
   dx: number;
   dy: number;
   size: number;
+  baseSize: number;
   life: number;
   maxLife: number;
   color: string;
+  drag: number;
+  gravity: number;
+  lifeDecay: number;
 }
 
 interface GameConfig {
@@ -49,6 +63,14 @@ const GAME_CONFIG: GameConfig = {
     word: 3,
   },
 };
+
+const PARTICLE_QUALITY_MULTIPLIER: Record<ParticleQuality, number> = {
+  medium: 0.8,
+  high: 1,
+  ultra: 1.25,
+};
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 // Pixel map with proper typing
 const PIXEL_MAP: PixelMap = {
@@ -347,276 +369,6 @@ interface TrailPoint {
   color: string;
 }
 
-interface TrailConfig {
-  width: number;
-  maxLength: number;
-  fadeSpeed: number;
-  mode: "rainbow" | "gradient" | "pulse";
-  ballSize: number;
-  ballSpeed: number;
-  firstLineText: string;
-  secondLineText: string;
-  particleEffects: boolean;
-}
-
-// Default trail configuration
-const DEFAULT_TRAIL_CONFIG: TrailConfig = {
-  width: 1,
-  maxLength: 50,
-  fadeSpeed: 0.02,
-  mode: "rainbow",
-  ballSize: 1,
-  ballSpeed: 1,
-  firstLineText: "CEM",
-  secondLineText: "IS ALL YOU NEED",
-  particleEffects: true,
-};
-
-interface SettingsPanelProps {
-  trailConfig: TrailConfig;
-  onModeChange: (mode: "rainbow" | "gradient" | "pulse") => void;
-  onLengthChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onFadeSpeedChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onWidthChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onBallSizeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onBallSpeedChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onFirstLineTextChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSecondLineTextChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onParticleEffectsChange: (enabled: boolean) => void;
-  onApplyText: () => void;
-  onResetDefaults: () => void;
-  settingsPanelRef: React.RefObject<HTMLDivElement | null>;
-}
-
-const SETTINGS_FIELD_IDS = {
-  firstLine: "settings-first-line",
-  secondLine: "settings-second-line",
-  ballSize: "settings-ball-size",
-  ballSpeed: "settings-ball-speed",
-  trailLength: "settings-trail-length",
-  fadeSpeed: "settings-fade-speed",
-  trailWidth: "settings-trail-width",
-} as const;
-
-function SettingsPanel({
-  trailConfig,
-  onModeChange,
-  onLengthChange,
-  onFadeSpeedChange,
-  onWidthChange,
-  onBallSizeChange,
-  onBallSpeedChange,
-  onFirstLineTextChange,
-  onSecondLineTextChange,
-  onParticleEffectsChange,
-  onApplyText,
-  onResetDefaults,
-  settingsPanelRef,
-}: SettingsPanelProps) {
-  return (
-    <div ref={settingsPanelRef} className={`${styles.settingsPanel} max-h-[80vh] overflow-y-auto`}>
-      <h2 className="text-xl font-bold mb-4">Settings</h2>
-
-      <Accordion type="single" collapsible className="w-full space-y-2">
-        <AccordionItem value="text">
-          <AccordionTrigger className="text-sm font-medium">Text Settings</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-2 pt-2">
-              <div>
-                <label htmlFor={SETTINGS_FIELD_IDS.firstLine} className="block text-xs mb-1">
-                  First Line
-                </label>
-                <input
-                  id={SETTINGS_FIELD_IDS.firstLine}
-                  type="text"
-                  value={trailConfig.firstLineText}
-                  onChange={onFirstLineTextChange}
-                  className="w-full px-2 py-1 text-sm bg-gray-800 rounded border border-gray-700 uppercase"
-                  maxLength={20}
-                  style={{ textTransform: "uppercase" }}
-                />
-              </div>
-              <div>
-                <label htmlFor={SETTINGS_FIELD_IDS.secondLine} className="block text-xs mb-1">
-                  Second Line
-                </label>
-                <input
-                  id={SETTINGS_FIELD_IDS.secondLine}
-                  type="text"
-                  value={trailConfig.secondLineText}
-                  onChange={onSecondLineTextChange}
-                  className="w-full px-2 py-1 text-sm bg-gray-800 rounded border border-gray-700 uppercase"
-                  maxLength={30}
-                  style={{ textTransform: "uppercase" }}
-                />
-              </div>
-              <button
-                onClick={onApplyText}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white py-1 px-4 rounded text-sm transition-colors mt-2"
-              >
-                Apply Text
-              </button>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="effects">
-          <AccordionTrigger className="text-sm font-medium">Visual Effects</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-4 pt-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs">Particle Effects</span>
-                <button
-                  onClick={() => onParticleEffectsChange(!trailConfig.particleEffects)}
-                  aria-pressed={trailConfig.particleEffects}
-                  className={`px-3 py-1 text-xs rounded transition-colors ${
-                    trailConfig.particleEffects ? "bg-blue-600" : "bg-gray-700"
-                  }`}
-                >
-                  {trailConfig.particleEffects ? "ON" : "OFF"}
-                </button>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-medium mb-2">Color Mode</h3>
-                <div className="flex space-x-1">
-                  <button
-                    className={`px-2 py-1 text-xs rounded ${
-                      trailConfig.mode === "rainbow" ? "bg-blue-600" : "bg-gray-700"
-                    }`}
-                    onClick={() => onModeChange("rainbow")}
-                    aria-pressed={trailConfig.mode === "rainbow"}
-                  >
-                    Rainbow
-                  </button>
-                  <button
-                    className={`px-2 py-1 text-xs rounded ${
-                      trailConfig.mode === "gradient" ? "bg-blue-600" : "bg-gray-700"
-                    }`}
-                    onClick={() => onModeChange("gradient")}
-                    aria-pressed={trailConfig.mode === "gradient"}
-                  >
-                    Gradient
-                  </button>
-                  <button
-                    className={`px-2 py-1 text-xs rounded ${
-                      trailConfig.mode === "pulse" ? "bg-blue-600" : "bg-gray-700"
-                    }`}
-                    onClick={() => onModeChange("pulse")}
-                    aria-pressed={trailConfig.mode === "pulse"}
-                  >
-                    Pulse
-                  </button>
-                </div>
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="ball">
-          <AccordionTrigger className="text-sm font-medium">Ball Settings</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-4 pt-2">
-              <div>
-                <label htmlFor={SETTINGS_FIELD_IDS.ballSize} className="block text-xs mb-1">
-                  Ball Size: {trailConfig.ballSize.toFixed(1)}x
-                </label>
-                <input
-                  id={SETTINGS_FIELD_IDS.ballSize}
-                  type="range"
-                  min="0.5"
-                  max="2"
-                  step="0.1"
-                  value={trailConfig.ballSize}
-                  onChange={onBallSizeChange}
-                  className="w-full"
-                />
-              </div>
-
-              <div>
-                <label htmlFor={SETTINGS_FIELD_IDS.ballSpeed} className="block text-xs mb-1">
-                  Ball Speed: {trailConfig.ballSpeed.toFixed(1)}x
-                </label>
-                <input
-                  id={SETTINGS_FIELD_IDS.ballSpeed}
-                  type="range"
-                  min="0.5"
-                  max="10"
-                  step="0.1"
-                  value={trailConfig.ballSpeed}
-                  onChange={onBallSpeedChange}
-                  className="w-full"
-                />
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="trail">
-          <AccordionTrigger className="text-sm font-medium">Trail Settings</AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-4 pt-2">
-              <div>
-                <label htmlFor={SETTINGS_FIELD_IDS.trailLength} className="block text-xs mb-1">
-                  Trail Length: {trailConfig.maxLength}
-                </label>
-                <input
-                  id={SETTINGS_FIELD_IDS.trailLength}
-                  type="range"
-                  min="5"
-                  max="100"
-                  value={trailConfig.maxLength}
-                  onChange={onLengthChange}
-                  className="w-full"
-                />
-              </div>
-
-              <div>
-                <label htmlFor={SETTINGS_FIELD_IDS.fadeSpeed} className="block text-xs mb-1">
-                  Fade Speed: {trailConfig.fadeSpeed.toFixed(2)}
-                </label>
-                <input
-                  id={SETTINGS_FIELD_IDS.fadeSpeed}
-                  type="range"
-                  min="0.01"
-                  max="0.1"
-                  step="0.01"
-                  value={trailConfig.fadeSpeed}
-                  onChange={onFadeSpeedChange}
-                  className="w-full"
-                />
-              </div>
-
-              <div>
-                <label htmlFor={SETTINGS_FIELD_IDS.trailWidth} className="block text-xs mb-1">
-                  Trail Width: {trailConfig.width.toFixed(1)}
-                </label>
-                <input
-                  id={SETTINGS_FIELD_IDS.trailWidth}
-                  type="range"
-                  min="0.5"
-                  max="3"
-                  step="0.1"
-                  value={trailConfig.width}
-                  onChange={onWidthChange}
-                  className="w-full"
-                />
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-
-      <button
-        onClick={onResetDefaults}
-        className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded text-sm transition-colors mt-4"
-      >
-        Reset Settings
-      </button>
-    </div>
-  );
-}
-
 const styles = {
   gameContainer: `relative w-full h-full`,
   canvas: `fixed top-0 left-0 w-full h-full`,
@@ -626,7 +378,6 @@ const styles = {
   errorHeading: `text-2xl font-bold mb-4`,
   errorMessage: `mb-4`,
   errorButton: `px-6 py-3 bg-white/10 hover:bg-white/20 rounded-md transition-colors`,
-  settingsPanel: `fixed top-16 right-4 z-10 bg-gray-900 bg-opacity-90 text-white p-4 rounded-lg shadow-lg w-64`,
 };
 
 function PromptingIsAllYouNeed() {
@@ -646,17 +397,26 @@ function PromptingIsAllYouNeed() {
   const initializeGameRef = useRef<() => void>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState("Game running");
 
   // Initialize trail config with URL parameters if they exist
   const [trailConfig, setTrailConfig] = useState<TrailConfig>(() => {
     const params = new URLSearchParams(window.location.search);
-    const firstLine = params.get("first") || DEFAULT_TRAIL_CONFIG.firstLineText;
-    const secondLine = params.get("second") || DEFAULT_TRAIL_CONFIG.secondLineText;
+    const firstLine = sanitizeDisplayText(
+      params.get("first") || DEFAULT_TRAIL_CONFIG.firstLineText,
+      DEFAULT_TRAIL_CONFIG.firstLineText,
+      MAX_FIRST_LINE_LENGTH,
+    );
+    const secondLine = sanitizeDisplayText(
+      params.get("second") || DEFAULT_TRAIL_CONFIG.secondLineText,
+      DEFAULT_TRAIL_CONFIG.secondLineText,
+      MAX_SECOND_LINE_LENGTH,
+    );
 
     return {
       ...DEFAULT_TRAIL_CONFIG,
-      firstLineText: firstLine.toUpperCase(),
-      secondLineText: secondLine.toUpperCase(),
+      firstLineText: firstLine,
+      secondLineText: secondLine,
     };
   });
 
@@ -674,7 +434,12 @@ function PromptingIsAllYouNeed() {
       const target = e.target;
       if (target instanceof HTMLElement) {
         const tagName = target.tagName;
-        if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT" || target.isContentEditable) {
+        if (
+          tagName === "INPUT" ||
+          tagName === "TEXTAREA" ||
+          tagName === "SELECT" ||
+          target.isContentEditable
+        ) {
           return;
         }
       }
@@ -682,7 +447,12 @@ function PromptingIsAllYouNeed() {
       switch (e.key) {
         case " ":
         case "Escape":
-          setIsPaused((prev) => !prev);
+          e.preventDefault();
+          setIsPaused((prev) => {
+            const next = !prev;
+            setStatusMessage(next ? "Game paused" : "Game resumed");
+            return next;
+          });
           break;
         case "r":
         case "R":
@@ -771,23 +541,26 @@ function PromptingIsAllYouNeed() {
     };
   }, []);
 
-  const getTrailColor = useCallback((age: number, mode: "rainbow" | "gradient" | "pulse"): string => {
-    const opacity = Math.max(0.2, 1 - age);
+  const getTrailColor = useCallback(
+    (age: number, mode: "rainbow" | "gradient" | "pulse"): string => {
+      const opacity = Math.max(0.2, 1 - age);
 
-    if (mode === "rainbow") {
-      const hue = (Date.now() / 20 + age * 50) % 360;
-      return `hsla(${hue}, 100%, 60%, ${opacity})`;
-    } else if (mode === "gradient") {
-      return `rgba(255, ${Math.floor(255 * (1 - age))}, ${Math.floor(255 * age)}, ${opacity})`;
-    } else if (mode === "pulse") {
-      // Pulse mode
-      const intensity = (Math.sin(Date.now() / 300) + 1) / 2;
-      return `rgba(255, ${Math.floor(100 + 155 * intensity)}, ${Math.floor(100 + 155 * (1 - intensity))}, ${opacity})`;
-    }
+      if (mode === "rainbow") {
+        const hue = (Date.now() / 20 + age * 50) % 360;
+        return `hsla(${hue}, 100%, 60%, ${opacity})`;
+      } else if (mode === "gradient") {
+        return `rgba(255, ${Math.floor(255 * (1 - age))}, ${Math.floor(255 * age)}, ${opacity})`;
+      } else if (mode === "pulse") {
+        // Pulse mode
+        const intensity = (Math.sin(Date.now() / 300) + 1) / 2;
+        return `rgba(255, ${Math.floor(100 + 155 * intensity)}, ${Math.floor(100 + 155 * (1 - intensity))}, ${opacity})`;
+      }
 
-    // Default fallback
-    return `rgba(255, 255, 255, ${opacity})`;
-  }, []);
+      // Default fallback
+      return `rgba(255, 255, 255, ${opacity})`;
+    },
+    [],
+  );
 
   // Update the ref when state changes
   useEffect(() => {
@@ -796,7 +569,8 @@ function PromptingIsAllYouNeed() {
     // Update ball radius and speed when settings change
     const scaling = calculateScalingValues();
     if (gameStateRef.current.ball && scaling) {
-      gameStateRef.current.ball.radius = (scaling.adjustedLargePixelSize / 2) * trailConfig.ballSize;
+      gameStateRef.current.ball.radius =
+        (scaling.adjustedLargePixelSize / 2) * trailConfig.ballSize;
 
       // Use the same base speed calculation as initialization
       const currentSpeed = scaling.BALL_SPEED * trailConfig.ballSpeed;
@@ -845,7 +619,8 @@ function PromptingIsAllYouNeed() {
     let startY = (canvas.height - totalTextHeight) / 2;
 
     words.forEach((word, wordIndex) => {
-      const pixelSize = wordIndex === 0 ? scaling.adjustedLargePixelSize : scaling.adjustedSmallPixelSize;
+      const pixelSize =
+        wordIndex === 0 ? scaling.adjustedLargePixelSize : scaling.adjustedSmallPixelSize;
       const totalWidth =
         wordIndex === 0
           ? word.split(" ").reduce((width, w, index) => {
@@ -967,53 +742,99 @@ function PromptingIsAllYouNeed() {
     ];
   }, [calculateScalingValues]);
 
-  const createExplosion = useCallback((x: number, y: number, size: number) => {
-    const particleCount = 12; // Parçacık sayısını artırdım
-    const particles: Particle[] = [];
+  const createExplosion = useCallback(
+    (x: number, y: number, size: number, vx: number, vy: number) => {
+      const config = trailConfigRef.current;
+      const qualityMultiplier = PARTICLE_QUALITY_MULTIPLIER[config.particleQuality];
+      const speed = Math.hypot(vx, vy);
+      const energy = clamp(speed / 6, 0.8, 2.2) * config.particleIntensity;
+      const direction = Math.atan2(vy, vx);
+      const coneSpread = Math.PI * (0.5 + Math.random() * 0.2);
+      const sparkCount = Math.round((9 + Math.random() * 6) * energy * qualityMultiplier);
+      const dustCount = Math.round((7 + Math.random() * 5) * energy * qualityMultiplier);
+      const particles: Particle[] = [];
 
-    // Patlama efekti için sıcak renkler
-    const explosionColors = [
-      "#FFD700", // Altın sarısı
-      "#FFA500", // Turuncu
-      "#FF8C00", // Koyu turuncu
-      "#FF4500", // Kırmızımsı turuncu
-      "#FF0000", // Kırmızı
-      "#FF6B6B", // Açık kırmızı
-    ];
+      const sparkColors = ["#FFE8B6", "#FFD27A", "#FFB347", "#FF9234", "#FF6B35"];
+      const dustColors = ["#E0D6C5", "#D2C2A8", "#BDAE97", "#9E907E"];
 
-    for (let i = 0; i < particleCount; i++) {
-      const angle = (Math.PI * 2 * i) / particleCount;
-      const speed = 3 + Math.random() * 3; // Hızı biraz artırdım
-      const randomColor = explosionColors[Math.floor(Math.random() * explosionColors.length)];
+      for (let i = 0; i < sparkCount; i++) {
+        const angle = direction + (Math.random() - 0.5) * coneSpread;
+        const sparkSpeed = (2.6 + Math.random() * 3.8) * energy;
+        const baseSize = (size * (0.26 + Math.random() * 0.22)) / 2;
+        particles.push({
+          kind: "spark",
+          x: x + (Math.random() - 0.5) * (size * 0.25),
+          y: y + (Math.random() - 0.5) * (size * 0.25),
+          dx: Math.cos(angle) * sparkSpeed,
+          dy: Math.sin(angle) * sparkSpeed,
+          size: baseSize,
+          baseSize,
+          life: 1,
+          maxLife: 1,
+          color: sparkColors[Math.floor(Math.random() * sparkColors.length)],
+          drag: 0.985,
+          gravity: 0.05 + Math.random() * 0.03,
+          lifeDecay: 0.024 + Math.random() * 0.018,
+        });
+      }
 
-      particles.push({
-        x,
-        y,
-        dx: Math.cos(angle) * speed,
-        dy: Math.sin(angle) * speed,
-        size: size / 2,
-        life: 1,
-        maxLife: 1,
-        color: randomColor,
-      });
-    }
+      for (let i = 0; i < dustCount; i++) {
+        const angle = direction + (Math.random() - 0.5) * (coneSpread * 1.25);
+        const dustSpeed = (0.9 + Math.random() * 1.7) * energy;
+        const baseSize = (size * (0.32 + Math.random() * 0.28)) / 2;
+        particles.push({
+          kind: "dust",
+          x: x + (Math.random() - 0.5) * (size * 0.35),
+          y: y + (Math.random() - 0.5) * (size * 0.35),
+          dx: Math.cos(angle) * dustSpeed * 0.85,
+          dy: Math.sin(angle) * dustSpeed - (0.18 + Math.random() * 0.2),
+          size: baseSize,
+          baseSize,
+          life: 1,
+          maxLife: 1,
+          color: dustColors[Math.floor(Math.random() * dustColors.length)],
+          drag: 0.95,
+          gravity: 0.014 + Math.random() * 0.015,
+          lifeDecay: 0.011 + Math.random() * 0.007,
+        });
+      }
 
-    gameStateRef.current.particles.push(...particles);
-  }, []);
+      const currentParticles = gameStateRef.current.particles;
+      const room = Math.max(0, config.maxParticles - currentParticles.length);
+      if (room <= 0) return;
+      if (particles.length <= room) {
+        currentParticles.push(...particles);
+      } else {
+        currentParticles.push(...particles.slice(0, room));
+      }
+    },
+    [],
+  );
 
   const updateParticles = useCallback(() => {
+    const maxParticles = trailConfigRef.current.maxParticles;
+    if (gameStateRef.current.particles.length > maxParticles) {
+      gameStateRef.current.particles = gameStateRef.current.particles.slice(-maxParticles);
+    }
+
     gameStateRef.current.particles = gameStateRef.current.particles.filter((particle) => {
-      // Update particle position
+      particle.dx *= particle.drag;
+      particle.dy = particle.dy * particle.drag + particle.gravity;
+      if (particle.kind === "dust") {
+        particle.dy -= 0.01;
+      }
+
       particle.x += particle.dx;
       particle.y += particle.dy;
 
-      // Gravity effect
-      particle.dy += 0.1; // Hafif yerçekimi efekti
+      particle.life -= particle.lifeDecay;
+      const lifeRatio = clamp(particle.life / particle.maxLife, 0, 1);
+      if (particle.kind === "spark") {
+        particle.size = particle.baseSize * (0.65 + lifeRatio * 0.75);
+      } else {
+        particle.size = particle.baseSize * (0.9 + (1 - lifeRatio) * 0.45);
+      }
 
-      // Update life
-      particle.life -= 0.025; // Biraz daha hızlı kaybolma
-
-      // Remove dead particles
       return particle.life > 0;
     });
   }, []);
@@ -1102,7 +923,13 @@ function PromptingIsAllYouNeed() {
         pixel.hit = true;
         // Create explosion effect when pixel is hit only if particle effects are enabled
         if (trailConfigRef.current.particleEffects) {
-          createExplosion(pixel.x + pixel.size / 2, pixel.y + pixel.size / 2, pixel.size);
+          createExplosion(
+            pixel.x + pixel.size / 2,
+            pixel.y + pixel.size / 2,
+            pixel.size,
+            ball.dx,
+            ball.dy,
+          );
         }
 
         const centerX = pixel.x + pixel.size / 2;
@@ -1124,12 +951,27 @@ function PromptingIsAllYouNeed() {
     ctx.fillStyle = GAME_CONFIG.colors.background;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw particles
-    gameStateRef.current.particles.forEach((particle) => {
+    const particles = gameStateRef.current.particles;
+    const sparks = particles.filter((particle) => particle.kind === "spark");
+    const dust = particles.filter((particle) => particle.kind === "dust");
+
+    ctx.globalCompositeOperation = "lighter";
+    sparks.forEach((particle) => {
+      const lifeRatio = clamp(particle.life / particle.maxLife, 0, 1);
       ctx.fillStyle = particle.color;
-      ctx.globalAlpha = particle.life;
+      ctx.globalAlpha = 0.2 + lifeRatio * 0.8;
       ctx.beginPath();
-      ctx.arc(particle.x, particle.y, particle.size * particle.life, 0, Math.PI * 2);
+      ctx.arc(particle.x, particle.y, particle.size * (0.6 + lifeRatio), 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.globalCompositeOperation = "source-over";
+    dust.forEach((particle) => {
+      const lifeRatio = clamp(particle.life / particle.maxLife, 0, 1);
+      ctx.fillStyle = particle.color;
+      ctx.globalAlpha = 0.14 + lifeRatio * 0.3;
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.globalAlpha = 1;
@@ -1152,7 +994,13 @@ function PromptingIsAllYouNeed() {
 
     ctx.fillStyle = GAME_CONFIG.colors.ball;
     ctx.beginPath();
-    ctx.arc(gameStateRef.current.ball.x, gameStateRef.current.ball.y, gameStateRef.current.ball.radius, 0, Math.PI * 2);
+    ctx.arc(
+      gameStateRef.current.ball.x,
+      gameStateRef.current.ball.y,
+      gameStateRef.current.ball.radius,
+      0,
+      Math.PI * 2,
+    );
     ctx.fill();
 
     ctx.fillStyle = GAME_CONFIG.colors.paddle;
@@ -1236,7 +1084,7 @@ function PromptingIsAllYouNeed() {
   }, [isPaused, showSettings, updateGame, drawGame]);
 
   // Handler functions for trail configuration changes
-  const handleModeChange = (mode: "rainbow" | "gradient" | "pulse") => {
+  const handleModeChange = (mode: TrailMode) => {
     setTrailConfig((prev) => ({ ...prev, mode }));
   };
 
@@ -1266,12 +1114,20 @@ function PromptingIsAllYouNeed() {
   };
 
   const handleFirstLineTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.toUpperCase();
+    const value = sanitizeDisplayText(
+      e.target.value,
+      DEFAULT_TRAIL_CONFIG.firstLineText,
+      MAX_FIRST_LINE_LENGTH,
+    );
     setTrailConfig((prev) => ({ ...prev, firstLineText: value }));
   };
 
   const handleSecondLineTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.toUpperCase();
+    const value = sanitizeDisplayText(
+      e.target.value,
+      DEFAULT_TRAIL_CONFIG.secondLineText,
+      MAX_SECOND_LINE_LENGTH,
+    );
     setTrailConfig((prev) => ({ ...prev, secondLineText: value }));
   };
 
@@ -1279,10 +1135,28 @@ function PromptingIsAllYouNeed() {
     setTrailConfig((prev) => ({ ...prev, particleEffects: enabled }));
   };
 
+  const handleParticleIntensityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number.parseFloat(e.target.value);
+    setTrailConfig((prev) => ({ ...prev, particleIntensity: value }));
+  };
+
+  const handleParticleQualityChange = (particleQuality: ParticleQuality) => {
+    setTrailConfig((prev) => {
+      const nextMaxParticles =
+        particleQuality === "ultra"
+          ? Math.max(prev.maxParticles, 800)
+          : particleQuality === "high"
+            ? Math.max(prev.maxParticles, 650)
+            : Math.min(prev.maxParticles, 500);
+      return { ...prev, particleQuality, maxParticles: nextMaxParticles };
+    });
+  };
+
   const handleApplyText = useCallback(() => {
     if (initializeGameRef.current) {
       updateURL(trailConfig.firstLineText, trailConfig.secondLineText);
       initializeGameRef.current();
+      setStatusMessage("Display text updated");
     }
   }, [trailConfig.firstLineText, trailConfig.secondLineText, updateURL]);
 
@@ -1292,6 +1166,7 @@ function PromptingIsAllYouNeed() {
     if (initializeGameRef.current) {
       initializeGameRef.current();
     }
+    setStatusMessage("Settings reset to defaults");
   };
 
   if (error) {
@@ -1299,6 +1174,10 @@ function PromptingIsAllYouNeed() {
       <div role="alert" className={styles.errorContainer}>
         <h2 className={styles.errorHeading}>An error occurred</h2>
         <p className={styles.errorMessage}>{error}</p>
+        <p className="mb-6 max-w-md text-center text-sm text-gray-300">
+          A rendering error interrupted the game loop. Reloading restores the simulation and keeps
+          the current URL-based text configuration.
+        </p>
         <button className={styles.errorButton} onClick={() => window.location.reload()}>
           Reload Game
         </button>
@@ -1308,15 +1187,36 @@ function PromptingIsAllYouNeed() {
 
   return (
     <div className={styles.gameContainer}>
-      <canvas ref={canvasRef} className={styles.canvas} role="img" aria-label="Prompting game canvas" tabIndex={0} />
+      <canvas
+        ref={canvasRef}
+        className={styles.canvas}
+        role="img"
+        aria-label="Prompting game canvas"
+        tabIndex={0}
+      />
+      <p className="sr-only" aria-live="polite">
+        {statusMessage}
+      </p>
+      <p className="sr-only">Keyboard shortcuts: Space or Escape to pause, R to reset game.</p>
       <div className={styles.gameControls} role="group" aria-label="Game controls">
-        <Button variant="destructive" size={"sm"} onClick={() => initializeGameRef.current?.()} aria-label="Reset game">
+        <Button
+          variant="destructive"
+          size={"sm"}
+          onClick={() => initializeGameRef.current?.()}
+          aria-label="Reset game"
+        >
           Reset
         </Button>
         <Button
           variant="outline"
           size={"sm"}
-          onClick={() => setIsPaused((prev) => !prev)}
+          onClick={() =>
+            setIsPaused((prev) => {
+              const next = !prev;
+              setStatusMessage(next ? "Game paused" : "Game resumed");
+              return next;
+            })
+          }
           aria-label={isPaused ? "Resume game" : "Pause game"}
         >
           {isPaused ? "Resume" : "Pause"}
@@ -1327,14 +1227,20 @@ function PromptingIsAllYouNeed() {
         variant={"default"}
         size={"icon"}
         className={styles.settingsButton}
-        onClick={() => setShowSettings(!showSettings)}
+        onClick={() =>
+          setShowSettings((prev) => {
+            const next = !prev;
+            setStatusMessage(next ? "Settings opened" : "Settings closed");
+            return next;
+          })
+        }
         aria-label={showSettings ? "Close settings" : "Open settings"}
       >
         <SettingsIcon className="h-6 w-6" />
       </Button>
 
       {showSettings && (
-        <SettingsPanel
+        <GameSettingsPanel
           trailConfig={trailConfig}
           onModeChange={handleModeChange}
           onLengthChange={handleLengthChange}
@@ -1345,6 +1251,8 @@ function PromptingIsAllYouNeed() {
           onFirstLineTextChange={handleFirstLineTextChange}
           onSecondLineTextChange={handleSecondLineTextChange}
           onParticleEffectsChange={handleParticleEffectsChange}
+          onParticleIntensityChange={handleParticleIntensityChange}
+          onParticleQualityChange={handleParticleQualityChange}
           onApplyText={handleApplyText}
           onResetDefaults={handleResetDefaults}
           settingsPanelRef={settingsPanelRef}

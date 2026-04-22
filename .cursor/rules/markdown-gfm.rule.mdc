@@ -1,0 +1,21 @@
+---
+name: markdown-gfm
+description: GitHub Flavored Markdown consistency requirements.
+---
+
+# Markdown GFM Rule
+
+Apply this rule for Markdown documentation changes.
+
+## Requirements
+
+- Use valid GitHub Flavored Markdown syntax.
+- Keep heading hierarchy consistent.
+- Prefer fenced code blocks with language tags when applicable.
+- Keep lists and tables readable and consistent.
+- Use links and references that resolve correctly in-repo.
+
+## Avoid
+
+- Raw HTML unless strictly necessary.
+- Inconsistent heading levels or broken list structure.
