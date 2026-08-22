@@ -17,13 +17,13 @@ This repository uses Cursor-native guidance under `.cursor/`.
 
 Apply rules in this order when multiple rules are relevant:
 
-1. `security-owasp.rule.md`
-2. `testing-playwright-vitest.rule.md`
-3. `review-quality.rule.md`
-4. `performance-cwv.rule.md`
-5. `accessibility-wcag22.rule.md`
-6. `frontend-react19-vite-ts.rule.md`
-7. `markdown-gfm.rule.md`
+1. `security-owasp.rule.mdc`
+2. `testing-playwright-vitest.rule.mdc`
+3. `review-quality.rule.mdc`
+4. `performance-cwv.rule.mdc`
+5. `accessibility-wcag22.rule.mdc`
+6. `frontend-react19-vite-ts.rule.mdc`
+7. `markdown-gfm.rule.mdc`
 
 ## Stack Constraints
 

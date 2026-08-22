@@ -37,15 +37,15 @@ pnpm dev
 
 - `pnpm dev` - Geliştirme sunucusunu başlatır
 - `pnpm build` - Üretim için `dist/` klasörüne build alır
-- `pnpm preview` - Build çıktısını yerel olarak önizler
+- `pnpm preview` - Build alıp Wrangler ile Cloudflare Worker önizlemesi açar
 - `pnpm typecheck` - TypeScript tip kontrolü yapar
-- `npm run lint` - ESLint ile kod kalitesi denetimi yapar
-- `npm run lint:fix` - Uygulanabilir lint hatalarını düzeltir
-- `npm run format` - Prettier format kontrolü yapar
-- `npm run test` - Vitest birim testlerini çalıştırır
-- `npm run test:coverage` - Coverage raporuyla test çalıştırır
-- `npm run perf:budget` - Build çıktı boyutunu performans bütçesine göre doğrular
-- `npm run quality` - typecheck + lint + test + build + perf budget zincirini tek adımda çalıştırır
+- `pnpm lint` - ESLint ile kod kalitesi denetimi yapar
+- `pnpm lint:fix` - Uygulanabilir lint hatalarını düzeltir
+- `pnpm format` - Prettier format kontrolü yapar
+- `pnpm test` - Vitest birim testlerini çalıştırır
+- `pnpm test:coverage` - Coverage raporuyla test çalıştırır
+- `pnpm perf:budget` - Build çıktı boyutunu performans bütçesine göre doğrular
+- `pnpm quality` - typecheck + lint + test + build + perf budget zincirini tek adımda çalıştırır
 
 ## 🎯 Özellikler
 

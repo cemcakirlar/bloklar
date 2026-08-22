@@ -16,7 +16,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "perf:budget": "node scripts/perf-budget.mjs",
-    "quality": "npm run typecheck && npm run lint && npm run test && npm run build && npm run perf:budget",
+    "quality": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run build && pnpm run perf:budget",
     "install:deps": "pnpm install",
     "deploy": "pnpm run build && wrangler deploy"
   },
