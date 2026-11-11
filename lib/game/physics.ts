@@ -32,11 +32,11 @@ export function bounceBallOffWalls(
 
   if (ball.y - ball.radius < 0) {
     ball.y = ball.radius;
-    ball.dy = -Math.abs(ball.dy);
+    ball.dy = Math.abs(ball.dy);
     bouncedY = true;
   } else if (ball.y + ball.radius > canvasHeight) {
     ball.y = canvasHeight - ball.radius;
-    ball.dy = Math.abs(ball.dy);
+    ball.dy = -Math.abs(ball.dy);
     bouncedY = true;
   }
 

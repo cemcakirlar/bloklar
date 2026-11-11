@@ -19,11 +19,20 @@ describe("physics", () => {
     expect(ball.dx).toBe(4);
     expect(ball.x).toBe(5);
 
+    // Top wall bounce
+    ball.y = -2;
+    ball.dy = -3;
+    const resTop = bounceBallOffWalls(ball, 800, 600);
+    expect(resTop.bouncedY).toBe(true);
+    expect(ball.dy).toBe(3);
+    expect(ball.y).toBe(5);
+
+    // Bottom wall bounce
     ball.y = 605;
     ball.dy = 3;
-    const resY = bounceBallOffWalls(ball, 800, 600);
-    expect(resY.bouncedY).toBe(true);
-    expect(ball.dy).toBe(3);
+    const resBottom = bounceBallOffWalls(ball, 800, 600);
+    expect(resBottom.bouncedY).toBe(true);
+    expect(ball.dy).toBe(-3);
     expect(ball.y).toBe(595);
   });
 
