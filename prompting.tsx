@@ -13,27 +13,27 @@ import {
   type TrailConfig,
   type TrailMode,
 } from "@/lib/game/trail-config";
+import {
+  DEFAULT_GAME_SPACING,
+  layoutTextPixels,
+  type Pixel,
+} from "@/lib/game/pixel-matrix";
+import {
+  generateExplosionParticles,
+  stepParticles,
+  type Particle,
+} from "@/lib/game/particles";
+import {
+  bounceBallOffWalls,
+  checkPaddleCollision,
+  checkPixelCollisions,
+  updatePaddlePositions,
+  calculateTrailColor,
+  type Ball,
+  type Paddle,
+} from "@/lib/game/physics";
 
-// Types for game configuration and state
-type PixelRow = (0 | 1)[];
-type LetterMatrix = PixelRow[];
-type PixelMap = Record<string, LetterMatrix>;
-
-interface Particle {
-  kind: "spark" | "dust";
-  x: number;
-  y: number;
-  dx: number;
-  dy: number;
-  size: number;
-  baseSize: number;
-  life: number;
-  maxLife: number;
-  color: string;
-  drag: number;
-  gravity: number;
-  lifeDecay: number;
-}
+export { PIXEL_MAP } from "@/lib/game/pixel-matrix";
 
 interface GameConfig {
   colors: {
@@ -49,7 +49,6 @@ interface GameConfig {
   };
 }
 
-// Game configuration
 const GAME_CONFIG: GameConfig = {
   colors: {
     default: "#FFFFFF",
@@ -58,300 +57,8 @@ const GAME_CONFIG: GameConfig = {
     ball: "#FFFFFF",
     paddle: "#FFFFFF",
   },
-  spacing: {
-    letter: 1,
-    word: 3,
-  },
+  spacing: DEFAULT_GAME_SPACING,
 };
-
-const PARTICLE_QUALITY_MULTIPLIER: Record<ParticleQuality, number> = {
-  medium: 0.8,
-  high: 1,
-  ultra: 1.25,
-};
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-
-// Pixel map with proper typing
-const PIXEL_MAP: PixelMap = {
-  P: [
-    [1, 1, 1, 1],
-    [1, 0, 0, 1],
-    [1, 1, 1, 1],
-    [1, 0, 0, 0],
-    [1, 0, 0, 0],
-  ],
-  R: [
-    [1, 1, 1, 1],
-    [1, 0, 0, 1],
-    [1, 1, 1, 1],
-    [1, 0, 1, 0],
-    [1, 0, 0, 1],
-  ],
-  O: [
-    [1, 1, 1, 1],
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-    [1, 1, 1, 1],
-  ],
-  M: [
-    [1, 0, 0, 0, 1],
-    [1, 1, 0, 1, 1],
-    [1, 0, 1, 0, 1],
-    [1, 0, 0, 0, 1],
-    [1, 0, 0, 0, 1],
-  ],
-  T: [
-    [1, 1, 1, 1, 1],
-    [0, 0, 1, 0, 0],
-    [0, 0, 1, 0, 0],
-    [0, 0, 1, 0, 0],
-    [0, 0, 1, 0, 0],
-  ],
-  I: [
-    [1, 1, 1],
-    [0, 1, 0],
-    [0, 1, 0],
-    [0, 1, 0],
-    [1, 1, 1],
-  ],
-  N: [
-    [1, 0, 0, 0, 1],
-    [1, 1, 0, 0, 1],
-    [1, 0, 1, 0, 1],
-    [1, 0, 0, 1, 1],
-    [1, 0, 0, 0, 1],
-  ],
-  G: [
-    [1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 0],
-    [1, 0, 1, 1, 1],
-    [1, 0, 0, 0, 1],
-    [1, 1, 1, 1, 1],
-  ],
-  S: [
-    [1, 1, 1, 1],
-    [1, 0, 0, 0],
-    [1, 1, 1, 1],
-    [0, 0, 0, 1],
-    [1, 1, 1, 1],
-  ],
-  A: [
-    [0, 1, 1, 0],
-    [1, 0, 0, 1],
-    [1, 1, 1, 1],
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-  ],
-  L: [
-    [1, 0, 0, 0],
-    [1, 0, 0, 0],
-    [1, 0, 0, 0],
-    [1, 0, 0, 0],
-    [1, 1, 1, 1],
-  ],
-  Y: [
-    [1, 0, 0, 0, 1],
-    [0, 1, 0, 1, 0],
-    [0, 0, 1, 0, 0],
-    [0, 0, 1, 0, 0],
-    [0, 0, 1, 0, 0],
-  ],
-  U: [
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-    [1, 1, 1, 1],
-  ],
-  D: [
-    [1, 1, 1, 0],
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-    [1, 1, 1, 0],
-  ],
-  E: [
-    [1, 1, 1, 1],
-    [1, 0, 0, 0],
-    [1, 1, 1, 1],
-    [1, 0, 0, 0],
-    [1, 1, 1, 1],
-  ],
-  C: [
-    [1, 1, 1, 1],
-    [1, 0, 0, 0],
-    [1, 0, 0, 0],
-    [1, 0, 0, 0],
-    [1, 1, 1, 1],
-  ],
-  B: [
-    [1, 1, 1, 1],
-    [1, 0, 0, 1],
-    [1, 1, 1, 1],
-    [1, 0, 0, 1],
-    [1, 1, 1, 1],
-  ],
-  F: [
-    [1, 1, 1, 1],
-    [1, 0, 0, 0],
-    [1, 1, 1, 0],
-    [1, 0, 0, 0],
-    [1, 0, 0, 0],
-  ],
-  H: [
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-    [1, 1, 1, 1],
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-  ],
-  J: [
-    [0, 0, 1, 1],
-    [0, 0, 0, 1],
-    [0, 0, 0, 1],
-    [1, 0, 0, 1],
-    [0, 1, 1, 0],
-  ],
-  K: [
-    [1, 0, 0, 1],
-    [1, 0, 1, 0],
-    [1, 1, 0, 0],
-    [1, 0, 1, 0],
-    [1, 0, 0, 1],
-  ],
-  Q: [
-    [1, 1, 1, 1],
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-    [1, 0, 1, 1],
-    [1, 1, 1, 1],
-  ],
-  V: [
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-    [0, 1, 1, 0],
-    [0, 0, 0, 0],
-  ],
-  W: [
-    [1, 0, 0, 0, 1],
-    [1, 0, 0, 0, 1],
-    [1, 0, 1, 0, 1],
-    [1, 1, 0, 1, 1],
-    [1, 0, 0, 0, 1],
-  ],
-  X: [
-    [1, 0, 0, 1],
-    [0, 1, 1, 0],
-    [0, 1, 1, 0],
-    [0, 1, 1, 0],
-    [1, 0, 0, 1],
-  ],
-  Z: [
-    [1, 1, 1, 1],
-    [0, 0, 1, 0],
-    [0, 1, 0, 0],
-    [1, 0, 0, 0],
-    [1, 1, 1, 1],
-  ],
-  "0": [
-    [0, 1, 1, 0],
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-    [0, 1, 1, 0],
-  ],
-  "1": [
-    [0, 1, 1, 0],
-    [0, 0, 1, 0],
-    [0, 0, 1, 0],
-    [0, 0, 1, 0],
-    [0, 1, 1, 1],
-  ],
-  "2": [
-    [1, 1, 1, 0],
-    [0, 0, 0, 1],
-    [0, 1, 1, 0],
-    [1, 0, 0, 0],
-    [1, 1, 1, 1],
-  ],
-  "3": [
-    [1, 1, 1, 0],
-    [0, 0, 0, 1],
-    [0, 1, 1, 0],
-    [0, 0, 0, 1],
-    [1, 1, 1, 0],
-  ],
-  "4": [
-    [1, 0, 0, 1],
-    [1, 0, 0, 1],
-    [1, 1, 1, 1],
-    [0, 0, 0, 1],
-    [0, 0, 0, 1],
-  ],
-  "5": [
-    [1, 1, 1, 1],
-    [1, 0, 0, 0],
-    [1, 1, 1, 0],
-    [0, 0, 0, 1],
-    [1, 1, 1, 0],
-  ],
-  "6": [
-    [0, 1, 1, 0],
-    [1, 0, 0, 0],
-    [1, 1, 1, 0],
-    [1, 0, 0, 1],
-    [0, 1, 1, 0],
-  ],
-  "7": [
-    [1, 1, 1, 1],
-    [0, 0, 0, 1],
-    [0, 0, 1, 0],
-    [0, 1, 0, 0],
-    [0, 1, 0, 0],
-  ],
-  "8": [
-    [0, 1, 1, 0],
-    [1, 0, 0, 1],
-    [0, 1, 1, 0],
-    [1, 0, 0, 1],
-    [0, 1, 1, 0],
-  ],
-  "9": [
-    [0, 1, 1, 0],
-    [1, 0, 0, 1],
-    [0, 1, 1, 1],
-    [0, 0, 0, 1],
-    [0, 1, 1, 0],
-  ],
-};
-
-// Game state types
-interface Ball {
-  x: number;
-  y: number;
-  dx: number;
-  dy: number;
-  radius: number;
-}
-
-interface Paddle {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  targetY: number;
-  isVertical: boolean;
-}
-
-interface Pixel {
-  x: number;
-  y: number;
-  size: number;
-  hit: boolean;
-}
 
 interface GameState {
   ball: Ball;
@@ -498,96 +205,48 @@ function PromptingIsAllYouNeed() {
     if (!canvas) return null;
 
     const scale = gameStateRef.current.scale;
-    const LARGE_PIXEL_SIZE = 8 * scale;
-    const SMALL_PIXEL_SIZE = 4 * scale;
+    const layout = layoutTextPixels({
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height,
+      scale,
+      firstLineText: trailConfigRef.current.firstLineText,
+      secondLineText: trailConfigRef.current.secondLineText,
+      spacing: GAME_CONFIG.spacing,
+    });
 
-    // Calculate total width for scaling
-    const words = [trailConfigRef.current.firstLineText, trailConfigRef.current.secondLineText];
-    const calculateWordWidth = (word: string, pixelSize: number) => {
-      return (
-        word.split("").reduce((width, letter) => {
-          const letterWidth = PIXEL_MAP[letter as keyof typeof PIXEL_MAP]?.[0]?.length ?? 0;
-          return width + letterWidth * pixelSize + GAME_CONFIG.spacing.letter * pixelSize;
-        }, 0) -
-        GAME_CONFIG.spacing.letter * pixelSize
-      );
-    };
-
-    const totalWidthLarge = calculateWordWidth(words[0], LARGE_PIXEL_SIZE);
-    const totalWidthSmall = words[1].split(" ").reduce((width, word, index) => {
-      return (
-        width +
-        calculateWordWidth(word, SMALL_PIXEL_SIZE) +
-        (index > 0 ? GAME_CONFIG.spacing.word * SMALL_PIXEL_SIZE : 0)
-      );
-    }, 0);
-    const totalWidth = Math.max(totalWidthLarge, totalWidthSmall);
-    const scaleFactor = (canvas.width * 0.8) / totalWidth;
-
-    const adjustedLargePixelSize = LARGE_PIXEL_SIZE * scaleFactor;
-    const adjustedSmallPixelSize = SMALL_PIXEL_SIZE * scaleFactor;
-
-    // Calculate base ball speed using adjusted pixel size for consistency
-    const BASE_BALL_SPEED = adjustedLargePixelSize * 0.2;
+    const BASE_BALL_SPEED = layout.adjustedLargePixelSize * 0.2;
 
     return {
       scale,
-      LARGE_PIXEL_SIZE,
-      SMALL_PIXEL_SIZE,
-      scaleFactor,
-      adjustedLargePixelSize,
-      adjustedSmallPixelSize,
+      LARGE_PIXEL_SIZE: 8 * scale,
+      SMALL_PIXEL_SIZE: 4 * scale,
+      scaleFactor: layout.scaleFactor,
+      adjustedLargePixelSize: layout.adjustedLargePixelSize,
+      adjustedSmallPixelSize: layout.adjustedSmallPixelSize,
       BALL_SPEED: BASE_BALL_SPEED,
     };
   }, []);
-
-  const getTrailColor = useCallback(
-    (age: number, mode: "rainbow" | "gradient" | "pulse"): string => {
-      const opacity = Math.max(0.2, 1 - age);
-
-      if (mode === "rainbow") {
-        const hue = (Date.now() / 20 + age * 50) % 360;
-        return `hsla(${hue}, 100%, 60%, ${opacity})`;
-      } else if (mode === "gradient") {
-        return `rgba(255, ${Math.floor(255 * (1 - age))}, ${Math.floor(255 * age)}, ${opacity})`;
-      } else if (mode === "pulse") {
-        // Pulse mode
-        const intensity = (Math.sin(Date.now() / 300) + 1) / 2;
-        return `rgba(255, ${Math.floor(100 + 155 * intensity)}, ${Math.floor(100 + 155 * (1 - intensity))}, ${opacity})`;
-      }
-
-      // Default fallback
-      return `rgba(255, 255, 255, ${opacity})`;
-    },
-    [],
-  );
 
   // Update the ref when state changes
   useEffect(() => {
     trailConfigRef.current = trailConfig;
 
-    // Update ball radius and speed when settings change
     const scaling = calculateScalingValues();
     if (gameStateRef.current.ball && scaling) {
       gameStateRef.current.ball.radius =
         (scaling.adjustedLargePixelSize / 2) * trailConfig.ballSize;
 
-      // Use the same base speed calculation as initialization
       const currentSpeed = scaling.BALL_SPEED * trailConfig.ballSpeed;
-
-      // Maintain direction while updating speed
       const dx = gameStateRef.current.ball.dx;
       const dy = gameStateRef.current.ball.dy;
       const currentMagnitude = Math.sqrt(dx * dx + dy * dy);
       if (currentMagnitude > 0) {
-        // Prevent division by zero
         gameStateRef.current.ball.dx = (dx / currentMagnitude) * currentSpeed;
         gameStateRef.current.ball.dy = (dy / currentMagnitude) * currentSpeed;
       }
     }
   }, [trailConfig, calculateScalingValues]);
 
-  // Move functions outside useEffect
   const initializeGame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -595,100 +254,43 @@ function PromptingIsAllYouNeed() {
     const scaling = calculateScalingValues();
     if (!scaling) return;
 
-    // Clear existing pixels and trail
     gameStateRef.current.pixels = [];
     gameStateRef.current.trailPoints = [];
 
-    const words = [trailConfigRef.current.firstLineText, trailConfigRef.current.secondLineText];
-
-    const calculateWordWidth = (word: string, pixelSize: number) => {
-      return (
-        word.split("").reduce((width, letter) => {
-          const letterWidth = PIXEL_MAP[letter as keyof typeof PIXEL_MAP]?.[0]?.length ?? 0;
-          return width + letterWidth * pixelSize + GAME_CONFIG.spacing.letter * pixelSize;
-        }, 0) -
-        GAME_CONFIG.spacing.letter * pixelSize
-      );
-    };
-
-    const largeTextHeight = 5 * scaling.adjustedLargePixelSize;
-    const smallTextHeight = 5 * scaling.adjustedSmallPixelSize;
-    const spaceBetweenLines = 5 * scaling.adjustedLargePixelSize;
-    const totalTextHeight = largeTextHeight + spaceBetweenLines + smallTextHeight;
-
-    let startY = (canvas.height - totalTextHeight) / 2;
-
-    words.forEach((word, wordIndex) => {
-      const pixelSize =
-        wordIndex === 0 ? scaling.adjustedLargePixelSize : scaling.adjustedSmallPixelSize;
-      const totalWidth =
-        wordIndex === 0
-          ? word.split(" ").reduce((width, w, index) => {
-              return (
-                width +
-                calculateWordWidth(w, scaling.adjustedLargePixelSize) +
-                (index > 0 ? GAME_CONFIG.spacing.word * scaling.adjustedLargePixelSize : 0)
-              );
-            }, 0)
-          : words[1].split(" ").reduce((width, w, index) => {
-              return (
-                width +
-                calculateWordWidth(w, scaling.adjustedSmallPixelSize) +
-                (index > 0 ? GAME_CONFIG.spacing.word * scaling.adjustedSmallPixelSize : 0)
-              );
-            }, 0);
-
-      let startX = (canvas.width - totalWidth) / 2;
-
-      word.split(" ").forEach((subWord) => {
-        subWord.split("").forEach((letter) => {
-          const pixelMap = PIXEL_MAP[letter as keyof typeof PIXEL_MAP];
-          if (!pixelMap) return;
-
-          for (let i = 0; i < pixelMap.length; i++) {
-            for (let j = 0; j < pixelMap[i].length; j++) {
-              if (pixelMap[i][j]) {
-                const x = startX + j * pixelSize;
-                const y = startY + i * pixelSize;
-                gameStateRef.current.pixels.push({ x, y, size: pixelSize, hit: false });
-              }
-            }
-          }
-          startX += (pixelMap[0].length + GAME_CONFIG.spacing.letter) * pixelSize;
-        });
-        startX +=
-          GAME_CONFIG.spacing.word *
-          (wordIndex === 0 ? scaling.adjustedLargePixelSize : scaling.adjustedSmallPixelSize);
-      });
-
-      startY += wordIndex === 0 ? largeTextHeight + spaceBetweenLines : 0;
+    const layout = layoutTextPixels({
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height,
+      scale: gameStateRef.current.scale,
+      firstLineText: trailConfigRef.current.firstLineText,
+      secondLineText: trailConfigRef.current.secondLineText,
+      spacing: GAME_CONFIG.spacing,
     });
+    gameStateRef.current.pixels = layout.pixels;
 
-    // Initialize ball position with random location along the edges
-    const randomEdge = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
-    let ballStartX, ballStartY;
+    const randomEdge = Math.floor(Math.random() * 4);
+    let ballStartX: number;
+    let ballStartY: number;
 
     switch (randomEdge) {
-      case 0: // top edge
-        ballStartX = canvas.width * (0.2 + Math.random() * 0.6); // 20% to 80% of width
+      case 0:
+        ballStartX = canvas.width * (0.2 + Math.random() * 0.6);
         ballStartY = canvas.height * 0.1;
         break;
-      case 1: // right edge
+      case 1:
         ballStartX = canvas.width * 0.9;
         ballStartY = canvas.height * (0.2 + Math.random() * 0.6);
         break;
-      case 2: // bottom edge
+      case 2:
         ballStartX = canvas.width * (0.2 + Math.random() * 0.6);
         ballStartY = canvas.height * 0.9;
         break;
-      default: // left edge
+      default:
         ballStartX = canvas.width * 0.1;
         ballStartY = canvas.height * (0.2 + Math.random() * 0.6);
         break;
     }
 
-    // Generate random angle between -45 and 45 degrees from the perpendicular to the edge
-    const baseAngle = (randomEdge * 90 + 90) * (Math.PI / 180); // Convert to radians
+    const baseAngle = (randomEdge * 90 + 90) * (Math.PI / 180);
     const randomAngle = baseAngle + (Math.random() * 90 - 45) * (Math.PI / 180);
 
     const speed = scaling.BALL_SPEED * trailConfigRef.current.ballSpeed;
@@ -745,98 +347,31 @@ function PromptingIsAllYouNeed() {
   const createExplosion = useCallback(
     (x: number, y: number, size: number, vx: number, vy: number) => {
       const config = trailConfigRef.current;
-      const qualityMultiplier = PARTICLE_QUALITY_MULTIPLIER[config.particleQuality];
-      const speed = Math.hypot(vx, vy);
-      const energy = clamp(speed / 6, 0.8, 2.2) * config.particleIntensity;
-      const direction = Math.atan2(vy, vx);
-      const coneSpread = Math.PI * (0.5 + Math.random() * 0.2);
-      const sparkCount = Math.round((9 + Math.random() * 6) * energy * qualityMultiplier);
-      const dustCount = Math.round((7 + Math.random() * 5) * energy * qualityMultiplier);
-      const particles: Particle[] = [];
-
-      const sparkColors = ["#FFE8B6", "#FFD27A", "#FFB347", "#FF9234", "#FF6B35"];
-      const dustColors = ["#E0D6C5", "#D2C2A8", "#BDAE97", "#9E907E"];
-
-      for (let i = 0; i < sparkCount; i++) {
-        const angle = direction + (Math.random() - 0.5) * coneSpread;
-        const sparkSpeed = (2.6 + Math.random() * 3.8) * energy;
-        const baseSize = (size * (0.26 + Math.random() * 0.22)) / 2;
-        particles.push({
-          kind: "spark",
-          x: x + (Math.random() - 0.5) * (size * 0.25),
-          y: y + (Math.random() - 0.5) * (size * 0.25),
-          dx: Math.cos(angle) * sparkSpeed,
-          dy: Math.sin(angle) * sparkSpeed,
-          size: baseSize,
-          baseSize,
-          life: 1,
-          maxLife: 1,
-          color: sparkColors[Math.floor(Math.random() * sparkColors.length)],
-          drag: 0.985,
-          gravity: 0.05 + Math.random() * 0.03,
-          lifeDecay: 0.024 + Math.random() * 0.018,
-        });
-      }
-
-      for (let i = 0; i < dustCount; i++) {
-        const angle = direction + (Math.random() - 0.5) * (coneSpread * 1.25);
-        const dustSpeed = (0.9 + Math.random() * 1.7) * energy;
-        const baseSize = (size * (0.32 + Math.random() * 0.28)) / 2;
-        particles.push({
-          kind: "dust",
-          x: x + (Math.random() - 0.5) * (size * 0.35),
-          y: y + (Math.random() - 0.5) * (size * 0.35),
-          dx: Math.cos(angle) * dustSpeed * 0.85,
-          dy: Math.sin(angle) * dustSpeed - (0.18 + Math.random() * 0.2),
-          size: baseSize,
-          baseSize,
-          life: 1,
-          maxLife: 1,
-          color: dustColors[Math.floor(Math.random() * dustColors.length)],
-          drag: 0.95,
-          gravity: 0.014 + Math.random() * 0.015,
-          lifeDecay: 0.011 + Math.random() * 0.007,
-        });
-      }
-
       const currentParticles = gameStateRef.current.particles;
-      const room = Math.max(0, config.maxParticles - currentParticles.length);
-      if (room <= 0) return;
-      if (particles.length <= room) {
-        currentParticles.push(...particles);
-      } else {
-        currentParticles.push(...particles.slice(0, room));
+      const newParticles = generateExplosionParticles({
+        x,
+        y,
+        size,
+        vx,
+        vy,
+        quality: config.particleQuality,
+        intensity: config.particleIntensity,
+        maxParticles: config.maxParticles,
+        currentParticleCount: currentParticles.length,
+      });
+
+      if (newParticles.length > 0) {
+        currentParticles.push(...newParticles);
       }
     },
     [],
   );
 
   const updateParticles = useCallback(() => {
-    const maxParticles = trailConfigRef.current.maxParticles;
-    if (gameStateRef.current.particles.length > maxParticles) {
-      gameStateRef.current.particles = gameStateRef.current.particles.slice(-maxParticles);
-    }
-
-    gameStateRef.current.particles = gameStateRef.current.particles.filter((particle) => {
-      particle.dx *= particle.drag;
-      particle.dy = particle.dy * particle.drag + particle.gravity;
-      if (particle.kind === "dust") {
-        particle.dy -= 0.01;
-      }
-
-      particle.x += particle.dx;
-      particle.y += particle.dy;
-
-      particle.life -= particle.lifeDecay;
-      const lifeRatio = clamp(particle.life / particle.maxLife, 0, 1);
-      if (particle.kind === "spark") {
-        particle.size = particle.baseSize * (0.65 + lifeRatio * 0.75);
-      } else {
-        particle.size = particle.baseSize * (0.9 + (1 - lifeRatio) * 0.45);
-      }
-
-      return particle.life > 0;
-    });
+    gameStateRef.current.particles = stepParticles(
+      gameStateRef.current.particles,
+      trailConfigRef.current.maxParticles,
+    );
   }, []);
 
   const updateGame = useCallback(() => {
@@ -847,101 +382,46 @@ function PromptingIsAllYouNeed() {
     const paddles = gameStateRef.current.paddles;
     const config = trailConfigRef.current;
 
-    // Update particles
     updateParticles();
 
     ball.x += ball.dx;
     ball.y += ball.dy;
 
-    // Add new point to trail
     gameStateRef.current.trailPoints.push({
       x: ball.x,
       y: ball.y,
       age: 0,
-      color: getTrailColor(0, config.mode),
+      color: calculateTrailColor(0, config.mode),
     });
 
-    // Update age of existing trail points
     gameStateRef.current.trailPoints.forEach((point) => {
       point.age += config.fadeSpeed;
     });
 
-    // Remove old trail points
     gameStateRef.current.trailPoints = gameStateRef.current.trailPoints
       .filter((point) => point.age < 1)
       .slice(0, config.maxLength);
 
-    if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) {
-      ball.dy = -ball.dy;
-    }
-    if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
-      ball.dx = -ball.dx;
-    }
+    bounceBallOffWalls(ball, canvas.width, canvas.height);
 
     paddles.forEach((paddle) => {
-      if (paddle.isVertical) {
-        if (
-          ball.x - ball.radius < paddle.x + paddle.width &&
-          ball.x + ball.radius > paddle.x &&
-          ball.y > paddle.y &&
-          ball.y < paddle.y + paddle.height
-        ) {
-          ball.dx = -ball.dx;
-        }
-      } else {
-        if (
-          ball.y - ball.radius < paddle.y + paddle.height &&
-          ball.y + ball.radius > paddle.y &&
-          ball.x > paddle.x &&
-          ball.x < paddle.x + paddle.width
-        ) {
-          ball.dy = -ball.dy;
-        }
-      }
+      checkPaddleCollision(ball, paddle);
     });
 
-    paddles.forEach((paddle) => {
-      if (paddle.isVertical) {
-        paddle.targetY = ball.y - paddle.height / 2;
-        paddle.targetY = Math.max(0, Math.min(canvas.height - paddle.height, paddle.targetY));
-        paddle.y += (paddle.targetY - paddle.y) * 0.1;
-      } else {
-        paddle.targetY = ball.x - paddle.width / 2;
-        paddle.targetY = Math.max(0, Math.min(canvas.width - paddle.width, paddle.targetY));
-        paddle.x += (paddle.targetY - paddle.x) * 0.1;
-      }
-    });
+    updatePaddlePositions(paddles, ball, canvas.width, canvas.height);
 
-    gameStateRef.current.pixels.forEach((pixel) => {
-      if (
-        !pixel.hit &&
-        ball.x + ball.radius > pixel.x &&
-        ball.x - ball.radius < pixel.x + pixel.size &&
-        ball.y + ball.radius > pixel.y &&
-        ball.y - ball.radius < pixel.y + pixel.size
-      ) {
-        pixel.hit = true;
-        // Create explosion effect when pixel is hit only if particle effects are enabled
-        if (trailConfigRef.current.particleEffects) {
-          createExplosion(
-            pixel.x + pixel.size / 2,
-            pixel.y + pixel.size / 2,
-            pixel.size,
-            ball.dx,
-            ball.dy,
-          );
-        }
-
-        const centerX = pixel.x + pixel.size / 2;
-        const centerY = pixel.y + pixel.size / 2;
-        if (Math.abs(ball.x - centerX) > Math.abs(ball.y - centerY)) {
-          ball.dx = -ball.dx;
-        } else {
-          ball.dy = -ball.dy;
-        }
-      }
-    });
-  }, [createExplosion, updateParticles, getTrailColor]);
+    const hitResults = checkPixelCollisions(ball, gameStateRef.current.pixels);
+    if (hitResults.length > 0 && config.particleEffects) {
+      const hit = hitResults[0].hitPixel;
+      createExplosion(
+        hit.x + hit.size / 2,
+        hit.y + hit.size / 2,
+        hit.size,
+        ball.dx,
+        ball.dy,
+      );
+    }
+  }, [createExplosion, updateParticles]);
 
   const drawGame = useCallback(() => {
     const canvas = canvasRef.current;
@@ -957,7 +437,7 @@ function PromptingIsAllYouNeed() {
 
     ctx.globalCompositeOperation = "lighter";
     sparks.forEach((particle) => {
-      const lifeRatio = clamp(particle.life / particle.maxLife, 0, 1);
+      const lifeRatio = Math.min(1, Math.max(0, particle.life / particle.maxLife));
       ctx.fillStyle = particle.color;
       ctx.globalAlpha = 0.2 + lifeRatio * 0.8;
       ctx.beginPath();
@@ -967,7 +447,7 @@ function PromptingIsAllYouNeed() {
 
     ctx.globalCompositeOperation = "source-over";
     dust.forEach((particle) => {
-      const lifeRatio = clamp(particle.life / particle.maxLife, 0, 1);
+      const lifeRatio = Math.min(1, Math.max(0, particle.life / particle.maxLife));
       ctx.fillStyle = particle.color;
       ctx.globalAlpha = 0.14 + lifeRatio * 0.3;
       ctx.beginPath();
@@ -976,7 +456,6 @@ function PromptingIsAllYouNeed() {
     });
     ctx.globalAlpha = 1;
 
-    // Draw trail - draw in reverse order so newest points appear on top
     const config = trailConfigRef.current;
     for (let i = gameStateRef.current.trailPoints.length - 1; i >= 0; i--) {
       const point = gameStateRef.current.trailPoints[i];
@@ -1019,12 +498,10 @@ function PromptingIsAllYouNeed() {
     initializeGame();
   }, [initializeGame]);
 
-  // Store initializeGame in ref for UI access
   useEffect(() => {
     initializeGameRef.current = initializeGame;
   }, [initializeGame]);
 
-  // Initial setup effect
   useEffect(() => {
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
@@ -1034,7 +511,6 @@ function PromptingIsAllYouNeed() {
     };
   }, [resizeCanvas]);
 
-  // Main game effect
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) {
@@ -1056,7 +532,6 @@ function PromptingIsAllYouNeed() {
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     };
 
-    // Handle clicks outside the settings panel
     const handleClickOutside = (event: MouseEvent) => {
       if (
         showSettings &&
@@ -1070,11 +545,8 @@ function PromptingIsAllYouNeed() {
     };
 
     document.addEventListener("pointerdown", handleClickOutside);
-
-    // Start the game loop
     gameLoopRef.current = requestAnimationFrame(gameLoop);
 
-    // Cleanup
     return () => {
       document.removeEventListener("pointerdown", handleClickOutside);
       if (gameLoopRef.current) {
@@ -1083,7 +555,6 @@ function PromptingIsAllYouNeed() {
     };
   }, [isPaused, showSettings, updateGame, drawGame]);
 
-  // Handler functions for trail configuration changes
   const handleModeChange = (mode: TrailMode) => {
     setTrailConfig((prev) => ({ ...prev, mode }));
   };
@@ -1148,37 +619,41 @@ function PromptingIsAllYouNeed() {
           : particleQuality === "high"
             ? Math.max(prev.maxParticles, 650)
             : Math.min(prev.maxParticles, 500);
-      return { ...prev, particleQuality, maxParticles: nextMaxParticles };
+
+      return {
+        ...prev,
+        particleQuality,
+        maxParticles: nextMaxParticles,
+      };
     });
   };
 
-  const handleApplyText = useCallback(() => {
-    if (initializeGameRef.current) {
-      updateURL(trailConfig.firstLineText, trailConfig.secondLineText);
-      initializeGameRef.current();
-      setStatusMessage("Display text updated");
-    }
-  }, [trailConfig.firstLineText, trailConfig.secondLineText, updateURL]);
+  const handleApplyText = () => {
+    updateURL(trailConfig.firstLineText, trailConfig.secondLineText);
+    initializeGame();
+    setShowSettings(false);
+    setStatusMessage("Text updated");
+  };
 
   const handleResetDefaults = () => {
     setTrailConfig({ ...DEFAULT_TRAIL_CONFIG });
     updateURL(DEFAULT_TRAIL_CONFIG.firstLineText, DEFAULT_TRAIL_CONFIG.secondLineText);
-    if (initializeGameRef.current) {
-      initializeGameRef.current();
-    }
-    setStatusMessage("Settings reset to defaults");
+    initializeGame();
+    setStatusMessage("Settings reset to default");
   };
 
   if (error) {
     return (
-      <div role="alert" className={styles.errorContainer}>
-        <h2 className={styles.errorHeading}>An error occurred</h2>
+      <div className={styles.errorContainer} role="alert" aria-live="assertive">
+        <h2 className={styles.errorHeading}>Something went wrong</h2>
         <p className={styles.errorMessage}>{error}</p>
-        <p className="mb-6 max-w-md text-center text-sm text-gray-300">
-          A rendering error interrupted the game loop. Reloading restores the simulation and keeps
-          the current URL-based text configuration.
-        </p>
-        <button className={styles.errorButton} onClick={() => window.location.reload()}>
+        <button
+          onClick={() => {
+            setError(null);
+            initializeGame();
+          }}
+          className={styles.errorButton}
+        >
           Reload Game
         </button>
       </div>
@@ -1186,46 +661,52 @@ function PromptingIsAllYouNeed() {
   }
 
   return (
-    <div className={styles.gameContainer}>
-      <canvas
-        ref={canvasRef}
-        className={styles.canvas}
-        role="img"
-        aria-label="Prompting game canvas"
-        tabIndex={0}
-      />
-      <p className="sr-only" aria-live="polite">
+    <div className={styles.gameContainer} role="region" aria-label="Game Arena">
+      <div className="sr-only" role="status" aria-live="polite">
         {statusMessage}
-      </p>
-      <p className="sr-only">Keyboard shortcuts: Space or Escape to pause, R to reset game.</p>
-      <div className={styles.gameControls} role="group" aria-label="Game controls">
+      </div>
+
+      <div className={styles.gameControls}>
         <Button
-          variant="destructive"
-          size={"sm"}
-          onClick={() => initializeGameRef.current?.()}
-          aria-label="Reset game"
-        >
-          Reset
-        </Button>
-        <Button
-          variant="outline"
-          size={"sm"}
-          onClick={() =>
+          onClick={() => {
             setIsPaused((prev) => {
               const next = !prev;
               setStatusMessage(next ? "Game paused" : "Game resumed");
               return next;
-            })
-          }
+            });
+          }}
+          variant="secondary"
+          size="sm"
+          className="bg-gray-800/80 text-white hover:bg-gray-700/80"
           aria-label={isPaused ? "Resume game" : "Pause game"}
         >
           {isPaused ? "Resume" : "Pause"}
         </Button>
+        <Button
+          onClick={() => {
+            initializeGame();
+            setStatusMessage("Game reset");
+          }}
+          variant="secondary"
+          size="sm"
+          className="bg-gray-800/80 text-white hover:bg-gray-700/80"
+          aria-label="Reset game"
+        >
+          Reset
+        </Button>
       </div>
+
+      <canvas
+        ref={canvasRef}
+        className={styles.canvas}
+        tabIndex={0}
+        aria-label="Pong game canvas showing ball, paddles, and bricks"
+      />
+
       <Button
         ref={settingsButtonRef}
-        variant={"default"}
-        size={"icon"}
+        variant="ghost"
+        size="icon"
         className={styles.settingsButton}
         onClick={() =>
           setShowSettings((prev) => {
